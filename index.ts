@@ -2,6 +2,7 @@ import { createServer } from 'http';
 const server = createServer();
 import { Server } from "socket.io";
 import GameRoom from './gameRoom';
+import Player from './player';
 export const io = new Server(server,{
     cors: {
         origin: "http://localhost:3000",
@@ -21,10 +22,10 @@ io.on('connection', (socket) => {
         callback(servers.map((s)=>s.getInfos()))
     })
     
-    socket.on('join',(id:string,callback)=>{
+    socket.on('join',(id:string,name:string,callback)=>{
         const server = servers.find((s)=>s.getID() === id)
-        if(server){
-            callback(server.addPlayer(socket))
+        if(server && name){
+            callback(server.addPlayer(new Player(socket,name)))
         }
         else{
             callback(false)
