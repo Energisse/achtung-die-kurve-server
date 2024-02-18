@@ -22,6 +22,7 @@ io.on('connection', (socket) => {
     })
     socket.on('create', (name: string, callback) => {
         GameServer.createRoom(new Player(socket, name))
+        console.log('room created')
         callback(true)
     })
 

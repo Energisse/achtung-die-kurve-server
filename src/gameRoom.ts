@@ -21,6 +21,11 @@ export default class GameRoom {
     private moderator: Player
 
     /**
+     * Array of colors
+     */
+    private static = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF"]
+
+    /**
      * Max number of players
      */
     private maxPlayers = 5
@@ -56,6 +61,9 @@ export default class GameRoom {
     public addPlayer(player: Player): boolean {
         //Check if the room is full
         if (this.isFull()) return false
+        //Set the color of the player
+        player.setColor(this.static.filter((c) => !this.players.find((p) => p.getColor() === c))[0])
+
         this.players.push(player)
         const socket = player.getSocket()
         socket.on('disconnect', () => {
@@ -70,7 +78,28 @@ export default class GameRoom {
             callback({ players: this.getPlayerInfos() })
         });
 
+        socket.on('start', () => {
+            if (this.players.length < 2) return
+            if (this.moderator.getSocket().id !== player.getSocket().id) return
+            io.to(this.id).emit('start')
+            setInterval(() => {
+                this.tick()
+            }, this.staticTickRate)
+        })
         return true
+    }
+
+    /**
+     * Send the new positions of the players to the clients
+     */
+    private tick() {
+        const newPositions: Array<Array<number>> = []
+        this.players.forEach((player) => {
+            player.tick()
+            newPositions.push(player.getPositions().at(-1)!)
+        })
+        io.emit("tick", newPositions)
+
     }
 
     /**
@@ -87,7 +116,8 @@ export default class GameRoom {
         return this.players.map((p) => ({
             name: p.getName(),
             isModerator: this.moderator?.getSocket().id === p.getSocket().id,
-            id: p.getSocket().id
+            id: p.getSocket().id,
+            color: p.getColor(),
         }))
     }
 
