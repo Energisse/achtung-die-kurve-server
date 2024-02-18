@@ -1,42 +1,41 @@
 import { createServer } from 'http';
-const server = createServer();
 import { Server } from "socket.io";
-import GameRoom from './gameRoom';
+import GameServer from './gameServer';
 import Player from './player';
-export const io = new Server(server,{
+const server = createServer();
+export const io = new Server(server, {
     cors: {
         origin: "http://localhost:3000",
         methods: ["GET", "POST"]
     }
 });
 
-const servers:GameRoom[] = [
-    new GameRoom(),
-    new GameRoom(),
-    new GameRoom(),
-]
-
 io.on('connection', (socket) => {
     console.log('a user connected');
-    socket.on('servers',(callback)=>{
-        callback(servers.map((s)=>s.getInfos()))
+    socket.on('servers', (callback) => {
+        callback(GameServer.getAllRooms().map((s) => s.getInfos()))
     })
-    
-    socket.on('join',(id:string,name:string,callback)=>{
-        const server = servers.find((s)=>s.getID() === id)
-        if(server && name){
-            callback(server.addPlayer(new Player(socket,name)))
+
+    socket.use((packet, next) => {
+        console.log(packet)
+        next()
+    })
+    socket.on('create', (name: string, callback) => {
+        GameServer.createRoom(new Player(socket, name))
+        callback(true)
+    })
+
+    socket.on('join', (id: string, name: string, callback) => {
+        const server = GameServer.getAllRooms().find((s) => s.getID() === id)
+        if (server && name) {
+            callback(server.addPlayer(new Player(socket, name)))
         }
-        else{
+        else {
             callback(false)
         }
     })
 });
 
-
-
-
-
 server.listen(5000, () => {
-  console.log('listening on *:5000');
+    console.log('listening on *:5000');
 });
