@@ -1,4 +1,5 @@
 import { Socket } from "socket.io";
+import { Dot, Line } from "./type";
 
 export default class Player {
 
@@ -15,7 +16,7 @@ export default class Player {
     /**
      * Positions of the player
      */
-    private positions: Array<[number, number]> = [[0, 0]];
+    private positions: Array<Line> = [];
 
     /**
      * Direction of the player
@@ -33,6 +34,11 @@ export default class Player {
     private color: string = '#ffffff'
 
     /**
+     * line width of the player
+     */
+    private lineWidth: number = 3
+
+    /**
      * Is the player alive
      */
     private alive: boolean = true
@@ -41,6 +47,11 @@ export default class Player {
      * Points of the player
      */
     private points: number = 0
+
+    /**
+     * Time remaining before player is starting again to make a line
+     */
+    private lineHoleTime: number = 0
 
     /**
      * Constructor of the player
@@ -75,27 +86,55 @@ export default class Player {
     public tick() {
         let lastPosition = this.positions.at(-1)!
         this.angle += this.direction
-        this.positions.push([
-            lastPosition[0] + Math.cos(this.angle),
-            lastPosition[1] + Math.sin(this.angle)
-        ])
+        const start = lastPosition.end
+
+        //Add random holes in the line
+        let invisible = false
+        if (this.lineHoleTime == 0) {
+            if (Math.random() < 1 / (5 * 128)) {
+                this.lineHoleTime = 24
+            }
+        }
+        else {
+            invisible = true
+            this.lineHoleTime--
+        }
+
+        this.positions.push(
+            {
+                invisible,
+                color: this.color,
+                stroke: this.lineWidth,
+                start,
+                end: {
+                    x: start.x + Math.cos(this.angle),
+                    y: start.y + Math.sin(this.angle)
+                }
+            }
+        )
     }
 
+    /**
+     * Check if the player collide with another player
+     * @param player The player to check the collision with
+     * @returns {boolean} True if the player collide with another player, false otherwise
+     */
     public collide(player: Player) {
         let selfMargin = 0
 
         if (this === player) selfMargin = 3
 
-        const x1 = this.positions.at(-1)![0]
-        const y1 = this.positions.at(-1)![1]
-        const x2 = this.positions.at(-2)![0]
-        const y2 = this.positions.at(-2)![1]
+        const x1 = this.positions.at(-1)!.start.x
+        const y1 = this.positions.at(-1)!.start.y
+        const x2 = this.positions.at(-1)!.end.x
+        const y2 = this.positions.at(-1)!.end.y
 
-        for (let index = 1; index < player.positions.length - selfMargin; index++) {
-            const x3 = player.getPositions().at(index)![0]
-            const y3 = player.getPositions().at(index)![1]
-            const x4 = player.getPositions().at(index - 1)![0]
-            const y4 = player.getPositions().at(index - 1)![1]
+        for (let index = 0; index < player.positions.length - selfMargin; index++) {
+            if (player.positions.at(index)!.invisible) continue
+            const x3 = player.getPositions().at(index)!.start.x
+            const y3 = player.getPositions().at(index)!.start.y
+            const x4 = player.getPositions().at(index)!.end.x
+            const y4 = player.getPositions().at(index)!.end.y
 
             if (this.intersect(
                 x1, y1, x2, y2,
@@ -106,6 +145,17 @@ export default class Player {
         return false
     }
 
+    /**
+     * Check if the player intersect with a line
+     * @param x1 The x position of the first point of the line
+     * @param y1 The y position of the first point of the line
+     * @param x2 The x position of the second point of the line
+     * @param y2 The y position of the second point of the line
+     * @param x3 The x position of the first point of the line to check the intersection with
+     * @param y3 The y position of the first point of the line to check the intersection with
+     * @param x4 The x position of the second point of the line to check the intersection with
+     * @param y4 The y position of the second point of the line to check the intersection with
+     */
     private intersect(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, x4: number, y4: number) {
         const det = (x2 - x1) * (y4 - y3) - (x4 - x3) * (y2 - y1);
         if (det === 0) return false;
@@ -132,9 +182,9 @@ export default class Player {
 
     /**
      * Get the positions of the player
-     * @returns {Array<[number, number]> } The positions of the player
+     * @returns {Array<Line> } The positions of the player
      */
-    public getPositions(): Array<[number, number]> {
+    public getPositions(): Array<Line> {
         return this.positions;
     }
 
@@ -156,10 +206,23 @@ export default class Player {
 
     /**
      * Set the positions of the player
-     * @param position The positions of the player
+     * @param {number} x The x position of the player
+     * @param {number} y The y position of the player
      */
-    setPositions(position: Array<[number, number]>) {
-        this.positions = position;
+    setPositions(x: number, y: number) {
+        this.positions = [{
+            start: {
+                x,
+                y
+            },
+            end: {
+                x,
+                y
+            },
+            invisible: false,
+            color: this.color,
+            stroke: this.lineWidth
+        }];
     }
 
     /**

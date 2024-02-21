@@ -2,10 +2,11 @@ import { createServer } from 'http';
 import { Server } from "socket.io";
 import GameServer from './gameServer';
 import Player from './player';
+
 const server = createServer();
 export const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
@@ -35,6 +36,10 @@ io.on('connection', (socket) => {
             callback(false)
         }
     })
+
+    socket.on('ping', (callback) => {
+        callback()
+    });
 });
 
 server.listen(5000, () => {

@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
+import GameServer from './gameServer';
 import { io } from './index';
 import Player from "./player";
-import GameServer from './gameServer';
+import { Line } from './type';
 
 export default class GameRoom {
 
@@ -94,25 +95,41 @@ export default class GameRoom {
         });
 
         socket.on('start', () => {
+            //Check if the game is already started
+            if (this.interval) return
+
+            //Check if there are enough players
             if (this.players.length < 2) return
+
+            //Check if the player is the moderator
             if (this.moderator.getSocket().id !== player.getSocket().id) return
-            io.to(this.id).emit('start')
-            this.players.forEach((p) => {
-                p.revive()
-                p.setPositions([[Math.random() * this.width, Math.random() * this.height]])
-            })
-            this.interval = setInterval(() => {
-                this.tick()
-            }, this.staticTickRate)
+
+            this.startGame()
         })
         return true
+    }
+
+    /**
+     * Start the game
+     */
+    private startGame() {
+        io.to(this.id).emit('start')
+        this.players.forEach((p) => {
+            p.revive()
+            const x = Math.random() * this.width
+            const y = Math.random() * this.height
+            p.setPositions(x, y)
+        })
+        this.interval = setInterval(() => {
+            this.tick()
+        }, this.staticTickRate)
     }
 
     /**
      * Send the new positions of the players to the clients
      */
     private tick() {
-        const newPositions: Array<[number, number] | null> = []
+        const newPositions: Array<Line | null> = []
         this.players.forEach((player) => {
             if (!player.isAlive()) {
                 newPositions.push(null);
@@ -120,19 +137,27 @@ export default class GameRoom {
             }
             player.tick()
             newPositions.push(player.getPositions().at(-1)!);
-            const [x, y] = player.getPositions().at(-1)!
+            const { end: { x, y } } = player.getPositions().at(-1)!;
+            let collision = false
             if (x < 0 || x > this.width || y < 0 || y > this.height) {
-                player.kill()
+                collision = true
             }
-            else if (player.getPositions().length > 2) {
-                this.players.forEach((p) => {
-                    if (player.collide(p)) {
-                        player.kill()
-                        if (p !== player) p.addPoints(1)
-                        else p.addPoints(-1)
-                        io.to(this.id).emit('leaderboard', this.getPlayerInfos())
+            else {
+                for (let opponent of this.players) {
+                    if (player.collide(opponent)) {
+                        collision = true
+                        if (opponent !== player) opponent.addPoints(1)
+                        else opponent.addPoints(-1)
+                        break
                     }
-                })
+                }
+            }
+            if (collision) {
+                player.kill()
+                this.players.forEach((p) => {
+                    if (p.isAlive()) p.addPoints(1)
+                });
+                io.to(this.id).emit('leaderboard', this.getPlayerInfos())
             }
         })
         io.emit("tick", newPositions)
@@ -140,14 +165,7 @@ export default class GameRoom {
         if (this.players.filter((p) => p.isAlive()).length < 2) {
             clearInterval(this.interval!)
             setTimeout(() => {
-                io.to(this.id).emit('start')
-                this.players.forEach((p) => {
-                    p.revive()
-                    p.setPositions([[Math.random() * this.width, Math.random() * this.height]])
-                })
-                this.interval = setInterval(() => {
-                    this.tick()
-                }, this.staticTickRate)
+                this.startGame()
             }, 3000)
             io.emit("end")
         }
