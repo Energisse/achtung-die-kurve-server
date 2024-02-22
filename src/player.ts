@@ -1,6 +1,5 @@
 import { Socket } from "socket.io";
-import { Dot, Line } from "./type";
-
+import { Line } from "./type";
 export default class Player {
 
     /**
@@ -52,6 +51,11 @@ export default class Player {
      * Time remaining before player is starting again to make a line
      */
     private lineHoleTime: number = 0
+
+    /**
+     * Speed of the player
+     */
+    private speed: number = 1
 
     /**
      * Constructor of the player
@@ -107,8 +111,8 @@ export default class Player {
                 stroke: this.lineWidth,
                 start,
                 end: {
-                    x: start.x + Math.cos(this.angle),
-                    y: start.y + Math.sin(this.angle)
+                    x: start.x + Math.cos(this.angle) * this.speed,
+                    y: start.y + Math.sin(this.angle) * this.speed
                 }
             }
         )
@@ -261,5 +265,21 @@ export default class Player {
      */
     public addPoints(points: number) {
         this.points += points
+    }
+
+    /**
+     * Get the speed of the player
+     * @returns {number} The speed of the player
+     */
+    public getSpeed(): number {
+        return this.speed
+    }
+
+    /**
+     * Set the speed of the player
+     * @param {number} speed The speed of the player
+     */
+    public setSpeed(speed: number) {
+        this.speed = speed
     }
 }

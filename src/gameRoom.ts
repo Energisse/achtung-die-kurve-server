@@ -3,6 +3,8 @@ import GameServer from './gameServer';
 import { io } from './index';
 import Player from "./player";
 import { Line } from './type';
+import PowerUp from './powerUp/powerUp';
+import SpeedPowerUp from './powerUp/speedPowerUp';
 
 export default class GameRoom {
 
@@ -55,6 +57,16 @@ export default class GameRoom {
      * Interval of the game
      */
     private interval: NodeJS.Timeout | null = null
+
+    /**
+     * Array of power up on the map
+     */
+    private powerUp: PowerUp[] = []
+
+    /**
+     * Array of active power up on the players
+     */
+    private activePowerUp: PowerUp[] = []
 
     constructor(Player: Player) {
         this.moderator = Player
@@ -114,6 +126,10 @@ export default class GameRoom {
      */
     private startGame() {
         io.to(this.id).emit('start')
+        this.powerUp = []
+        this.activePowerUp.forEach((p) => p.unapplyEffect())
+        this.activePowerUp = []
+
         this.players.forEach((p) => {
             p.revive()
             const x = Math.random() * this.width
@@ -129,6 +145,35 @@ export default class GameRoom {
      * Send the new positions of the players to the clients
      */
     private tick() {
+        if (Math.random() < 0.001) {
+            const powerUp = new SpeedPowerUp()
+            this.powerUp.push(powerUp)
+            io.to(this.id).emit('powerUp', this.powerUp)
+        }
+
+        this.activePowerUp = this.activePowerUp.filter((p) => {
+            if (p.isExpired()) {
+                p.unapplyEffect()
+                return false
+            }
+            return true
+        })
+
+        if (this.powerUp.length > 0) {
+            const start = this.powerUp.length
+            this.powerUp = this.powerUp.filter((p) => {
+                for (let player of this.players) {
+                    if (p.collision(player)) {
+                        p.applyEffect(player)
+                        this.activePowerUp.push(p)
+                        return false
+                    }
+                }
+                return true
+            })
+            if (start !== this.powerUp.length) io.to(this.id).emit('powerUp', this.powerUp)
+        }
+
         const newPositions: Array<Line | null> = []
         this.players.forEach((player) => {
             if (!player.isAlive()) {
