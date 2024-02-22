@@ -2,9 +2,10 @@ import { v4 as uuidv4 } from 'uuid';
 import GameServer from './gameServer';
 import { io } from './index';
 import Player from "./player";
-import { Line } from './type';
 import PowerUp from './powerUp/powerUp';
 import SpeedPowerUp from './powerUp/speedPowerUp';
+import Circle from './shape/circle';
+import Line from './shape/line';
 
 export default class GameRoom {
 
@@ -68,6 +69,11 @@ export default class GameRoom {
      */
     private activePowerUp: PowerUp[] = []
 
+    /**
+     * Current tick
+     */
+    private currentTick = 0
+
     constructor(Player: Player) {
         this.moderator = Player
         this.addPlayer(Player)
@@ -125,12 +131,14 @@ export default class GameRoom {
      * Start the game
      */
     private startGame() {
+        this.currentTick = 0
         io.to(this.id).emit('start')
         this.powerUp = []
         this.activePowerUp.forEach((p) => p.unapplyEffect())
         this.activePowerUp = []
 
         this.players.forEach((p) => {
+            p.removeTail()
             p.revive()
             const x = Math.random() * this.width
             const y = Math.random() * this.height
@@ -145,6 +153,7 @@ export default class GameRoom {
      * Send the new positions of the players to the clients
      */
     private tick() {
+        this.currentTick++;
         if (Math.random() < 0.001) {
             const powerUp = new SpeedPowerUp()
             this.powerUp.push(powerUp)
@@ -174,38 +183,70 @@ export default class GameRoom {
             if (start !== this.powerUp.length) io.to(this.id).emit('powerUp', this.powerUp)
         }
 
-        const newPositions: Array<Line | null> = []
+        const newPositions: Array<{
+            position: Circle
+            newTail?: Line
+            color: string
+        } | null> = []
+
+        let killed: number = 0
+
         this.players.forEach((player) => {
             if (!player.isAlive()) {
                 newPositions.push(null);
                 return
             }
-            player.tick()
-            newPositions.push(player.getPositions().at(-1)!);
-            const { end: { x, y } } = player.getPositions().at(-1)!;
+            player.tick(this.currentTick);
+
+            const newTail = player.getTail().getParts().at(-1);
+            const tickPlayer: {
+                newTail?: Line
+                position: Circle
+                color: string
+            } = {
+                position: player.getPosition(),
+                color: player.getColor()
+            }
+
+            if (newTail?.p2.x === player.getPosition().x && newTail?.p2.y === player.getPosition().y) {
+                tickPlayer.newTail = newTail
+            }
+            newPositions.push(tickPlayer)
+
+
             let collision = false
-            if (x < 0 || x > this.width || y < 0 || y > this.height) {
+            if (player.getPosition().x < 0 || player.getPosition().x > this.width || player.getPosition().y < 0 || player.getPosition().y > this.height) {
+                console.log(player.getName(), "collide with the wall")
                 collision = true
             }
             else {
                 for (let opponent of this.players) {
                     if (player.collide(opponent)) {
+                        console.log(player.getName(), "collide with", opponent.getName())
                         collision = true
                         if (opponent !== player) opponent.addPoints(1)
                         else opponent.addPoints(-1)
+                        killed++
+                        player.kill()
+
                         break
                     }
                 }
             }
+
             if (collision) {
                 player.kill()
-                this.players.forEach((p) => {
-                    if (p.isAlive()) p.addPoints(1)
-                });
-                io.to(this.id).emit('leaderboard', this.getPlayerInfos())
+                killed++
             }
+
         })
-        io.emit("tick", newPositions)
+        if (killed) {
+            this.players.forEach((p) => {
+                if (p.isAlive()) p.addPoints(1)
+            });
+            io.to(this.id).emit('leaderboard', this.getPlayerInfos())
+        }
+        io.to(this.id).emit("tick", newPositions)
 
         if (this.players.filter((p) => p.isAlive()).length < 2) {
             clearInterval(this.interval!)

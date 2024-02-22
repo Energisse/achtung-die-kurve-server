@@ -1,6 +1,9 @@
 import { Socket } from "socket.io";
-import { Line } from "./type";
-export default class Player {
+import Circle from "./shape/circle";
+import { Tail } from "./tail";
+import Line from "./shape/line";
+import Dot from "./shape/dot";
+export default class Player extends Circle {
 
     /**
      * Socket of the player
@@ -13,9 +16,9 @@ export default class Player {
     private name: string;
 
     /**
-     * Positions of the player
+     * tail of the player
      */
-    private positions: Array<Line> = [];
+    private tail: Tail = new Tail();
 
     /**
      * Direction of the player
@@ -63,6 +66,7 @@ export default class Player {
      * @param {string} name The name of the player
      */
     constructor(socket: Socket, name: string) {
+        super(0, 0, 3)
         this.socket = socket
         this.name = name
 
@@ -87,10 +91,11 @@ export default class Player {
     /**
      * Update the position of the player
      */
-    public tick() {
-        let lastPosition = this.positions.at(-1)!
+    public tick(tick: number) {
+        const lastX = this.x
+        const lastY = this.y
+
         this.angle += this.direction
-        const start = lastPosition.end
 
         //Add random holes in the line
         let invisible = false
@@ -104,18 +109,12 @@ export default class Player {
             this.lineHoleTime--
         }
 
-        this.positions.push(
-            {
-                invisible,
-                color: this.color,
-                stroke: this.lineWidth,
-                start,
-                end: {
-                    x: start.x + Math.cos(this.angle) * this.speed,
-                    y: start.y + Math.sin(this.angle) * this.speed
-                }
-            }
-        )
+        this.x = this.x + Math.cos(this.angle) * this.speed
+        this.y = this.y + Math.sin(this.angle) * this.speed
+
+        if (invisible) return
+
+        this.tail.addPart(new Line(new Dot(lastX, lastY), new Dot(this.x, this.y)))
     }
 
     /**
@@ -123,49 +122,21 @@ export default class Player {
      * @param player The player to check the collision with
      * @returns {boolean} True if the player collide with another player, false otherwise
      */
-    public collide(player: Player) {
+    public collide(player: Player): boolean {
         let selfMargin = 0
+        if (this !== player && super.collide(player)) return true
 
-        if (this === player) selfMargin = 3
+        if (this === player) selfMargin = 100
 
-        const x1 = this.positions.at(-1)!.start.x
-        const y1 = this.positions.at(-1)!.start.y
-        const x2 = this.positions.at(-1)!.end.x
-        const y2 = this.positions.at(-1)!.end.y
-
-        for (let index = 0; index < player.positions.length - selfMargin; index++) {
-            if (player.positions.at(index)!.invisible) continue
-            const x3 = player.getPositions().at(index)!.start.x
-            const y3 = player.getPositions().at(index)!.start.y
-            const x4 = player.getPositions().at(index)!.end.x
-            const y4 = player.getPositions().at(index)!.end.y
-
-            if (this.intersect(
-                x1, y1, x2, y2,
-                x3, y3, x4, y4
-            )) return true
+        for (let i = 0; i < player.tail.getParts().length - selfMargin; i++) {
+            if (super.collide(player.tail.getParts().at(i)!)) {
+                console.log(player.tail.getParts().at(i))
+                console.log(player.getPosition())
+                return true
+            }
         }
 
         return false
-    }
-
-    /**
-     * Check if the player intersect with a line
-     * @param x1 The x position of the first point of the line
-     * @param y1 The y position of the first point of the line
-     * @param x2 The x position of the second point of the line
-     * @param y2 The y position of the second point of the line
-     * @param x3 The x position of the first point of the line to check the intersection with
-     * @param y3 The y position of the first point of the line to check the intersection with
-     * @param x4 The x position of the second point of the line to check the intersection with
-     * @param y4 The y position of the second point of the line to check the intersection with
-     */
-    private intersect(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, x4: number, y4: number) {
-        const det = (x2 - x1) * (y4 - y3) - (x4 - x3) * (y2 - y1);
-        if (det === 0) return false;
-        const lambda = ((y4 - y3) * (x4 - x1) + (x3 - x4) * (y4 - y1)) / det;
-        const gamma = ((y1 - y2) * (x4 - x1) + (x2 - x1) * (y4 - y1)) / det;
-        return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
     }
 
     /**
@@ -182,14 +153,6 @@ export default class Player {
      */
     public getName(): string {
         return this.name;
-    }
-
-    /**
-     * Get the positions of the player
-     * @returns {Array<Line> } The positions of the player
-     */
-    public getPositions(): Array<Line> {
-        return this.positions;
     }
 
     /**
@@ -214,19 +177,8 @@ export default class Player {
      * @param {number} y The y position of the player
      */
     setPositions(x: number, y: number) {
-        this.positions = [{
-            start: {
-                x,
-                y
-            },
-            end: {
-                x,
-                y
-            },
-            invisible: false,
-            color: this.color,
-            stroke: this.lineWidth
-        }];
+        this.x = x
+        this.y = y
     }
 
     /**
@@ -282,4 +234,28 @@ export default class Player {
     public setSpeed(speed: number) {
         this.speed = speed
     }
+
+    /**
+     * Get the tail of the player
+     * @returns {Tail} The tail of the player
+     */
+    public getTail(): Tail {
+        return this.tail
+    }
+
+    /**
+     * Get the position of the player
+     * @returns {Circle} The position of the player
+     */
+    public getPosition(): Circle {
+        return new Circle(this.x, this.y, this.radius);
+    }
+
+    /**
+     * Remove the tail of the player 
+     */
+    public removeTail() {
+        this.tail = new Tail()
+    }
+
 }

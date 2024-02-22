@@ -83,7 +83,7 @@ export default abstract class PowerUp {
      * @returns {boolean} True if the power up collides with the player, false otherwise
      */
     public collision(player: Player): boolean {
-        const collide = Math.sqrt((this.x - player.getPositions().at(-1)?.end.x!) ** 2 + (this.y - player.getPositions().at(-1)?.end.y!) ** 2) < this.radius
+        const collide = Math.sqrt((this.x - player.getPosition().x!) ** 2 + (this.y - player.getPosition().y!) ** 2) < this.radius
         if (collide) this.start = Date.now()
         return collide
     }
