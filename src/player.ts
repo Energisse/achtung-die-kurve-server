@@ -3,12 +3,14 @@ import Circle from "./shape/circle";
 import { Tail } from "./tail";
 import Line from "./shape/line";
 import Dot from "./shape/dot";
+import { v4 as uuidv4 } from 'uuid';
+
 export default class Player extends Circle {
 
     /**
-     * Socket of the player
+     * Unique identifier
      */
-    private socket: Socket;
+    private id = uuidv4()
 
     /**
      * Name of the player
@@ -65,27 +67,9 @@ export default class Player extends Circle {
      * @param {Socket} socket The socket of the player
      * @param {string} name The name of the player
      */
-    constructor(socket: Socket, name: string) {
-        super(0, 0, 3)
-        this.socket = socket
+    constructor(name: string) {
+        super(new Dot(0, 0), 3)
         this.name = name
-
-        socket.on('direction', (msg) => {
-            console.log('message: ' + msg);
-            switch (msg) {
-                case 'left':
-                    this.direction = -0.05
-                    break;
-                case 'right':
-                    this.direction = 0.05
-                    break;
-                case 'forward':
-                    this.direction = 0
-                    break;
-                default:
-                    break;
-            }
-        })
     }
 
     /**
@@ -114,7 +98,7 @@ export default class Player extends Circle {
 
         if (invisible) return
 
-        this.tail.addPart(new Line(new Dot(lastX, lastY), new Dot(this.x, this.y)))
+        this.tail.addPart(new Line(new Dot(lastX, lastY), new Dot(this.x, this.y), this.lineWidth))
     }
 
     /**
@@ -137,14 +121,6 @@ export default class Player extends Circle {
         }
 
         return false
-    }
-
-    /**
-     * Get the socket of the player
-     * @returns {Socket} The socket of the player
-     */
-    public getSocket(): Socket {
-        return this.socket
     }
 
     /**
@@ -176,7 +152,7 @@ export default class Player extends Circle {
      * @param {number} x The x position of the player
      * @param {number} y The y position of the player
      */
-    setPositions(x: number, y: number) {
+    public setPositions(x: number, y: number) {
         this.x = x
         this.y = y
     }
@@ -248,7 +224,7 @@ export default class Player extends Circle {
      * @returns {Circle} The position of the player
      */
     public getPosition(): Circle {
-        return new Circle(this.x, this.y, this.radius);
+        return this;
     }
 
     /**
@@ -258,4 +234,19 @@ export default class Player extends Circle {
         this.tail = new Tail()
     }
 
+    /**
+     * Set the direction of the player
+     * @param {number} direction The direction of the player
+     */
+    public setDirection(direction: number) {
+        this.direction = direction
+    }
+
+    /**
+     * Get the id of the player
+     * @returns {string} The id of the player
+     */
+    public getID() {
+        return this.id
+    }
 }

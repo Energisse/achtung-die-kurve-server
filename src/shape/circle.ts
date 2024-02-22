@@ -1,17 +1,8 @@
 import { collisionBetweenCircleAndCircle, collisionBetweenCircleAndLine } from "./collision";
+import Dot from "./dot";
 import Line from "./line";
 
-export default class Circle {
-
-    /**
-     * X position of the circle
-     */
-    public x: number
-
-    /**
-     * Y position of the circle
-     */
-    public y: number
+export default class Circle extends Dot {
 
     /**
      * Radius of the circle
@@ -20,13 +11,11 @@ export default class Circle {
 
     /**
      * Constructor of the circle
-     * @param x The x position of the circle
-     * @param y The y position of the circle
+     * @param center The center of the circle
      * @param radius The radius of the circle
      */
-    constructor(x: number, y: number, radius: number) {
-        this.x = x
-        this.y = y
+    constructor(center: Dot, radius: number) {
+        super(center.x, center.y)
         this.radius = radius
     }
 
@@ -37,5 +26,4 @@ export default class Circle {
             return collisionBetweenCircleAndCircle(this, other);
         return false;
     }
-
 }

@@ -1,10 +1,14 @@
 import Circle from "./circle";
+import Dot from "./dot";
 import Line from "./line";
 
 export const collisionBetweenCircleAndCircle = (circle1: Circle, circle2: Circle) => {
     return Math.sqrt((circle1.x - circle2.x) ** 2 + (circle1.y - circle2.y) ** 2) < circle1.radius + circle2.radius
 }
 
+/**
+ * @deprecated not using width 
+ */
 export const collisionBetweenLineAndLine = ({ p1: { x: x1, y: y1 }, p2: { x: x2, y: y2 } }: Line, { p1: { x: x3, y: y3 }, p2: { x: x4, y: y4 } }: Line) => {
     const det = (x2 - x1) * (y4 - y3) - (x4 - x3) * (y2 - y1);
     if (det === 0) return false;
@@ -13,28 +17,81 @@ export const collisionBetweenLineAndLine = ({ p1: { x: x1, y: y1 }, p2: { x: x2,
     return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
 }
 
-export const collisionBetweenCircleAndLine = (circle: Circle, line: Line) => {
-    var dist;
-    const v1x = line.p2.x - line.p1.x;
-    const v1y = line.p2.y - line.p1.y;
-    const v2x = circle.x - line.p1.x;
-    const v2y = circle.y - line.p1.y;
-    // get the unit distance along the line of the closest point to
-    // circle center
-    const u = (v2x * v1x + v2y * v1y) / (v1y * v1y + v1x * v1x);
+export const collisionBetweenCircleAndLine = (circle: Circle, { p1, p2, width: lineWidth }: Line) => {
 
+    const rectCenterX = (p1.x + p2.x) / 2;
+    const rectCenterY = (p1.y + p2.y) / 2;
 
-    // if the point is on the line segment get the distance squared
-    // from that point to the circle center
-    if (u >= 0 && u <= 1) {
-        dist = (line.p1.x + v1x * u - circle.x) ** 2 + (line.p1.y + v1y * u - circle.y) ** 2;
+    const width = getDistance(p1, p2);
+    const height = lineWidth;
+
+    const rectX = rectCenterX - width / 2;
+    const rectY = rectCenterY - height / 2;
+
+    const rotation = getLineAngle(p1, p2);
+
+    const rectReferenceX = rectX;
+    const rectReferenceY = rectY;
+
+    // Rotate circle's center point back
+    const unrotatedCircleX = Math.cos(rotation) * (circle.x - rectCenterX) - Math.sin(rotation) * (circle.y - rectCenterY) + rectCenterX;
+    const unrotatedCircleY = Math.sin(rotation) * (circle.x - rectCenterX) + Math.cos(rotation) * (circle.y - rectCenterY) + rectCenterY;
+
+    // Closest point in the rectangle to the center of circle rotated backwards(unrotated)
+    let closestX, closestY;
+
+    // Find the unrotated closest x point from center of unrotated circle
+    if (unrotatedCircleX < rectReferenceX) {
+        closestX = rectReferenceX;
+    } else if (unrotatedCircleX > rectReferenceX + width) {
+        closestX = rectReferenceX + width;
     } else {
-        // if closest point not on the line segment
-        // use the unit distance to determine which end is closest
-        // and get dist square to circle
-        dist = u < 0 ?
-            (line.p1.x - circle.x) ** 2 + (line.p1.y - circle.y) ** 2 :
-            (line.p2.x - circle.x) ** 2 + (line.p2.y - circle.y) ** 2;
+        closestX = unrotatedCircleX;
     }
-    return dist < circle.radius * circle.radius;
+
+    // Find the unrotated closest y point from center of unrotated circle
+    if (unrotatedCircleY < rectReferenceY) {
+        closestY = rectReferenceY;
+    } else if (unrotatedCircleY > rectReferenceY + height) {
+        closestY = rectReferenceY + height;
+    } else {
+        closestY = unrotatedCircleY;
+    }
+
+    // Determine collision
+    let collision = false;
+    const distance = getDistance(new Dot(unrotatedCircleX, unrotatedCircleY), new Dot(closestX, closestY));
+
+    if (distance < circle.radius) {
+        collision = true;
+    }
+    else {
+        collision = false;
+    }
+
+    return collision;
+}
+
+function getDistance({ x: x1, y: y1 }: Dot, { x: x2, y: y2 }: Dot) {
+    const dX = Math.abs(x1 - x2);
+    const dY = Math.abs(y1 - y2);
+
+    return Math.sqrt((dX * dX) + (dY * dY));
+}
+
+
+function getLineAngle({ x: x1, y: y1 }: Dot, { x: x2, y: y2 }: Dot) {
+    // Calculate the difference in coordinates
+    const deltaX = x2 - x1;
+    const deltaY = y2 - y1;
+
+    // Use arctangent to get the angle in radians
+    let angleRad = Math.atan2(deltaY, deltaX);
+
+    // Ensure the angle is between 0 and 2*pi (full circle)
+    if (angleRad < 0) {
+        angleRad += 2 * Math.PI;
+    }
+
+    return angleRad;
 }

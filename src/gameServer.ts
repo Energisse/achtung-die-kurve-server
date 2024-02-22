@@ -1,5 +1,5 @@
+import { Socket } from "socket.io"
 import GameRoom from "./gameRoom"
-import Player from "./player";
 
 export default class GameServer {
 
@@ -34,11 +34,11 @@ export default class GameServer {
 
     /**
      * Create a room
-     * @param Player The player who creates the room 
+     * @param socketPlayer The player who creates the room 
      * @returns {GameRoom} The created room
      */
-    public static createRoom(Player: Player) {
-        const room = new GameRoom(Player)
+    public static createRoom(socketPlayer: Socket) {
+        const room = new GameRoom(socketPlayer)
         GameServer.rooms.push(room)
         return room
     }

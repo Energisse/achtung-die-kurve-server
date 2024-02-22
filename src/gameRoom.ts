@@ -1,11 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import GameServer from './gameServer';
-import { io } from './index';
+import { io } from './server';
 import Player from "./player";
 import PowerUp from './powerUp/powerUp';
 import SpeedPowerUp from './powerUp/speedPowerUp';
 import Circle from './shape/circle';
 import Line from './shape/line';
+import { Socket } from 'socket.io';
 
 export default class GameRoom {
 
@@ -74,9 +75,9 @@ export default class GameRoom {
      */
     private currentTick = 0
 
-    constructor(Player: Player) {
-        this.moderator = Player
-        this.addPlayer(Player)
+    constructor(socketPlayer: Socket) {
+        this.moderator = socketPlayer.player
+        this.addPlayer(socketPlayer)
     }
 
     /**
@@ -92,27 +93,45 @@ export default class GameRoom {
      * @param {Player} player The player to add
      * @returns {boolean} True if the player has been added, false otherwise
      */
-    public addPlayer(player: Player): boolean {
+    public addPlayer(socketPlayer: Socket): boolean {
+        const player = socketPlayer.player
+
         //Check if the room is full
         if (this.isFull()) return false
         //Set the color of the player
         player.setColor(this.static.filter((c) => !this.players.find((p) => p.getColor() === c))[0])
 
         this.players.push(player)
-        const socket = player.getSocket()
-        socket.on('disconnect', () => {
+        //Manage player disconnection
+        socketPlayer.on('disconnect', () => {
             this.removePlayer(player)
             io.to(this.id).emit('leaderboard', this.getPlayerInfos())
         });
 
-        socket.join(this.id);
+        socketPlayer.join(this.id);
 
         io.to(this.id).emit('leaderboard', this.getPlayerInfos())
-        socket.on('leaderboard', (callback) => {
+        socketPlayer.on('leaderboard', (callback) => {
             callback(this.getPlayerInfos())
         });
 
-        socket.on('start', () => {
+        socketPlayer.on('direction', (msg) => {
+            switch (msg) {
+                case 'left':
+                    player.setDirection(-0.05)
+                    break;
+                case 'right':
+                    player.setDirection(0.05)
+                    break;
+                case 'forward':
+                    player.setDirection(0)
+                    break;
+                default:
+                    break;
+            }
+        })
+
+        socketPlayer.on('start', () => {
             //Check if the game is already started
             if (this.interval) return
 
@@ -120,7 +139,7 @@ export default class GameRoom {
             if (this.players.length < 2) return
 
             //Check if the player is the moderator
-            if (this.moderator.getSocket().id !== player.getSocket().id) return
+            if (this.moderator !== player) return
 
             this.startGame()
         })
@@ -262,16 +281,16 @@ export default class GameRoom {
      * @param {Player} player The player to remove 
      */
     public removePlayer(player: Player) {
-        this.players = this.players.filter((p) => p.getSocket().id !== player.getSocket().id)
+        this.players = this.players.filter((p) => p === player)
         if (this.players.length === 0) return GameServer.removeRoom(this.id)
-        else if (this.moderator?.getSocket().id === player.getSocket().id) this.moderator = this.players[0]
+        else if (this.moderator === player) this.moderator = this.players[0]
     }
 
     private getPlayerInfos() {
         return this.players.map((p) => ({
             name: p.getName(),
-            isModerator: this.moderator?.getSocket().id === p.getSocket().id,
-            id: p.getSocket().id,
+            isModerator: this.moderator === p,
+            id: p.getID(),
             color: p.getColor(),
             alive: p.isAlive(),
             points: p.getPoints()
