@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { io } from "socket.io-client";
 import server from "../src/server";
 import GameServer from "../src/gameServer";
@@ -11,8 +13,7 @@ const client2 = io('http://localhost:5000', {
 
 describe('Server rooms', () => {
     beforeAll((done) => {
-        server.listen(5000, () => {
-            //console.log('listening on *:5000');
+        server.listen(process.env.PORT, () => {
             done()
         });
     });
