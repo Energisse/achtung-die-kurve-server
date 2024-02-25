@@ -19,7 +19,7 @@ export default class Circle extends Dot {
         this.radius = radius
     }
 
-    collide(other: Line | Circle): boolean {
+    public collide(other: Line | Circle): boolean {
         if (other instanceof Line)
             return collisionBetweenCircleAndLine(this, other);
         if (other instanceof Circle)

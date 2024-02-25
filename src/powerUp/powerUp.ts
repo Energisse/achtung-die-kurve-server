@@ -1,21 +1,16 @@
 import Player from "../player"
+import Circle from "../shape/circle"
+import Dot from "../shape/dot"
+import { v4 as uuidv4 } from 'uuid';
 
-export default abstract class PowerUp {
+export type PowerUpType = "speed-increase" | "head-increase"
 
-    /**
-     * X position of the power up
-     */
-    private x: number
-
-    /**
-     * Y position of the power up
-     */
-    private y: number
+export default abstract class PowerUp extends Circle {
 
     /**
-     * Radius of the power up
+     * Unique identifier
      */
-    private radius: number
+    public id = uuidv4()
 
     /**
      * Duration of the power up
@@ -23,23 +18,28 @@ export default abstract class PowerUp {
     private duration: number
 
     /**
-     * Start time of the power up
-     */
-    private start: number = Date.now()
-
-    /**
      * Players who take the power up
      */
     private players: Player[] = []
 
     /**
+     * 
+     */
+    public type : PowerUpType;
+
+    /**
+     * 
+     */
+    public other:boolean
+
+    /**
      * Constructor of the power up
      * @param duration The duration of the power up
      */
-    constructor(duration: number) {
-        this.x = Math.random() * 1000
-        this.y = Math.random() * 1000
-        this.radius = 10
+    constructor(duration: number,type:PowerUpType) {
+        super(new Dot(Math.random() * 1000, Math.random() * 1000), 10)
+        this.type =type
+        this.other = Math.random() > 0.5
         this.duration = duration
     }
 
@@ -53,14 +53,14 @@ export default abstract class PowerUp {
      * Apply the effect of the power up
      * @param player The player who takes the power up
      */
-    public applyEffect(player: Player | Player[]): void {
-        if (!Array.isArray(player)) {
+    public applyEffect(player: Player, players : Player[]): void {
+        if(this.other){
+            this.players = players.filter(p => p !== player)
+            this.players.forEach(p => this.applyEffectToPlayer(p))
+        }else{
+            this.players = [player]
             this.applyEffectToPlayer(player)
-            this.players.push(player)
-            return
         }
-        player.forEach(p => this.applyEffectToPlayer(p))
-        this.players.push(...player)
     }
 
     /**
@@ -78,22 +78,10 @@ export default abstract class PowerUp {
     }
 
     /**
-     * Check if the power up collides with a player
-     * @param player The player to check
-     * @returns {boolean} True if the power up collides with the player, false otherwise
+     * Return duration of the power up
+     * @returns  {number} The duration of the power up
      */
-    public collision(player: Player): boolean {
-        const collide = Math.sqrt((this.x - player.getPosition().x!) ** 2 + (this.y - player.getPosition().y!) ** 2) < this.radius
-        if (collide) this.start = Date.now()
-        return collide
-    }
-
-    /**
-     * Check if the power up is expired
-     * @returns {boolean} True if the power up is expired, false otherwise
-     */
-    public isExpired(): boolean {
-        console.log(Date.now() - this.start, this.duration * 1000)
-        return Date.now() - this.start > this.duration * 1000
+    public getDuration(): number {
+        return this.duration
     }
 }

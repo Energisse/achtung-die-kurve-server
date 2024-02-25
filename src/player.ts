@@ -249,4 +249,20 @@ export default class Player extends Circle {
     public getID() {
         return this.id
     }
+
+    /**
+     * Get the radius of the player
+     * @returns 
+     */
+    public getRadius() {
+        return this.radius
+    }   
+
+    /**
+     * Set the radius of the player
+     * @param radius 
+     */
+    public setRadius(radius: number) {  
+        this.radius = radius
+    }
 }

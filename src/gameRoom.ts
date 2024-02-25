@@ -7,6 +7,7 @@ import SpeedPowerUp from './powerUp/speedPowerUp';
 import Circle from './shape/circle';
 import Line from './shape/line';
 import { Socket } from 'socket.io';
+import PowerUpManager from './powerUp/powerUpManager';
 
 export default class GameRoom {
 
@@ -43,7 +44,7 @@ export default class GameRoom {
     /**
      * Static tick rate
      */
-    private staticTickRate = 1000 / 64
+    private static staticTickRate = 64
 
     /**
      * Width of the room
@@ -61,23 +62,33 @@ export default class GameRoom {
     private interval: NodeJS.Timeout | null = null
 
     /**
-     * Array of power up on the map
+     * power up manager
      */
-    private powerUp: PowerUp[] = []
-
-    /**
-     * Array of active power up on the players
-     */
-    private activePowerUp: PowerUp[] = []
+    private powerUpManager: PowerUpManager = new PowerUpManager()
 
     /**
      * Current tick
      */
     private currentTick = 0
 
+    /**
+     * Constructor of the room
+     * @param {Player} moderator The moderator of the room
+     */ 
+
     constructor(socketPlayer: Socket) {
         this.moderator = socketPlayer.player
         this.addPlayer(socketPlayer)
+
+        this.powerUpManager.on('powerUp:Added', ({x,y,radius,id,type,other}: PowerUp) => {
+            console.log('powerUp:Added', {x,y,radius,id})
+            io.to(this.id).emit('powerUp:Added', {x,y,radius,id,type,other})
+        })
+
+        this.powerUpManager.on('powerUp:Removed', (powerUp: PowerUp[]) => {
+            console.log('powerUp:Removed', powerUp.map(({id}) => (id)))
+            io.to(this.id).emit('powerUp:Removed', powerUp.map(({id}) => (id)))
+        })
     }
 
     /**
@@ -152,9 +163,7 @@ export default class GameRoom {
     private startGame() {
         this.currentTick = 0
         io.to(this.id).emit('start')
-        this.powerUp = []
-        this.activePowerUp.forEach((p) => p.unapplyEffect())
-        this.activePowerUp = []
+        this.powerUpManager.reset()
 
         this.players.forEach((p) => {
             p.removeTail()
@@ -165,7 +174,7 @@ export default class GameRoom {
         })
         this.interval = setInterval(() => {
             this.tick()
-        }, this.staticTickRate)
+        }, 1000 / GameRoom.staticTickRate)
     }
 
     /**
@@ -173,35 +182,9 @@ export default class GameRoom {
      */
     private tick() {
         this.currentTick++;
-        if (Math.random() < 0.001) {
-            const powerUp = new SpeedPowerUp()
-            this.powerUp.push(powerUp)
-            io.to(this.id).emit('powerUp', this.powerUp)
-        }
-
-        this.activePowerUp = this.activePowerUp.filter((p) => {
-            if (p.isExpired()) {
-                p.unapplyEffect()
-                return false
-            }
-            return true
-        })
-
-        if (this.powerUp.length > 0) {
-            const start = this.powerUp.length
-            this.powerUp = this.powerUp.filter((p) => {
-                for (let player of this.players) {
-                    if (p.collision(player)) {
-                        p.applyEffect(player)
-                        this.activePowerUp.push(p)
-                        return false
-                    }
-                }
-                return true
-            })
-            if (start !== this.powerUp.length) io.to(this.id).emit('powerUp', this.powerUp)
-        }
-
+        
+        this.powerUpManager.tick(this.currentTick,this.players)
+      
         const newPositions: Array<{
             position: Circle
             newTail?: Line
@@ -234,7 +217,7 @@ export default class GameRoom {
 
 
             let collision = false
-            if (player.getPosition().x < 0 || player.getPosition().x > this.width || player.getPosition().y < 0 || player.getPosition().y > this.height) {
+            if (player.getPosition().x-player.getRadius() < 0 || player.getPosition().x+player.getRadius() > this.width || player.getPosition().y-player.getRadius() < 0 || player.getPosition().y+player.getRadius() > this.height) {
                 console.log(player.getName(), "collide with the wall")
                 collision = true
             }
@@ -317,4 +300,13 @@ export default class GameRoom {
     public getID() {
         return this.id
     }
+
+    /**
+     * Get the tick rate of the room 
+     * @returns {number} The tick rate of the room 
+     */
+    public static getTickRate() {
+        return this.staticTickRate
+    }
+
 }
