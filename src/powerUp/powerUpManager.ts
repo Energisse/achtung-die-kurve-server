@@ -1,11 +1,14 @@
 import PowerUp from "./powerUp"
 import SpeedPowerUp from "./speedPowerUp"
-import EventEmitter from "node:events";
 import Player from "../player";
 import GameRoom from "../gameRoom";
 import BigHeadPowerUp from "./bigHeadPowerUp";
+import TypedEventEmitter from "../TypedEventEmitter";
 
-export default class PowerUpManager extends EventEmitter{
+export default class PowerUpManager extends TypedEventEmitter<{
+    'powerUp:Added': [PowerUp],
+    'powerUp:Removed': [PowerUp[]]
+}>{
     /**
      * Array of power ups constructor 
      */

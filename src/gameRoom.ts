@@ -81,12 +81,10 @@ export default class GameRoom {
         this.addPlayer(socketPlayer)
 
         this.powerUpManager.on('powerUp:Added', ({x,y,radius,id,type,other}: PowerUp) => {
-            console.log('powerUp:Added', {x,y,radius,id})
             io.to(this.id).emit('powerUp:Added', {x,y,radius,id,type,other})
         })
 
         this.powerUpManager.on('powerUp:Removed', (powerUp: PowerUp[]) => {
-            console.log('powerUp:Removed', powerUp.map(({id}) => (id)))
             io.to(this.id).emit('powerUp:Removed', powerUp.map(({id}) => (id)))
         })
     }
@@ -291,6 +289,14 @@ export default class GameRoom {
             maxPlayers: this.maxPlayers,
             created: this.created
         }
+    }
+
+    /**
+     * Get the moderator of the room
+     * @returns {Player} The moderator of the room
+     */
+    public getModerator(): Player {
+        return this.moderator
     }
 
     /**
