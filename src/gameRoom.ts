@@ -74,18 +74,17 @@ export default class GameRoom {
     /**
      * Constructor of the room
      * @param {Player} moderator The moderator of the room
-     */ 
-
+     */
     constructor(socketPlayer: Socket) {
         this.moderator = socketPlayer.player
         this.addPlayer(socketPlayer)
 
-        this.powerUpManager.on('powerUp:Added', ({x,y,radius,id,type,other}: PowerUp) => {
-            io.to(this.id).emit('powerUp:Added', {x,y,radius,id,type,other})
+        this.powerUpManager.on('powerUp:Added', ({ x, y, radius, id, type, other }: PowerUp) => {
+            io.to(this.id).emit('powerUp:Added', { x, y, radius, id, type, other })
         })
 
         this.powerUpManager.on('powerUp:Removed', (powerUp: PowerUp[]) => {
-            io.to(this.id).emit('powerUp:Removed', powerUp.map(({id}) => (id)))
+            io.to(this.id).emit('powerUp:Removed', powerUp.map(({ id }) => (id)))
         })
     }
 
@@ -114,7 +113,6 @@ export default class GameRoom {
         //Manage player disconnection
         socketPlayer.on('disconnect', () => {
             this.removePlayer(player)
-            io.to(this.id).emit('leaderboard', this.getPlayerInfos())
         });
 
         socketPlayer.join(this.id);
@@ -137,6 +135,15 @@ export default class GameRoom {
                     break;
                 default:
                     break;
+            }
+        })
+
+        socketPlayer.on('kick', (id: string) => {
+            if (this.moderator !== player) return
+            const kicked = this.players.find((p) => p.getID() === id)
+            if (kicked) {
+                kicked.getSocket().emit('kicked');
+                this.removePlayer(kicked)
             }
         })
 
@@ -180,9 +187,9 @@ export default class GameRoom {
      */
     private tick() {
         this.currentTick++;
-        
-        this.powerUpManager.tick(this.currentTick,this.players)
-      
+
+        this.powerUpManager.tick(this.currentTick, this.players)
+
         const newPositions: Array<{
             position: Circle
             newTail?: Line
@@ -215,7 +222,7 @@ export default class GameRoom {
 
 
             let collision = false
-            if (player.getPosition().x-player.getRadius() < 0 || player.getPosition().x+player.getRadius() > this.width || player.getPosition().y-player.getRadius() < 0 || player.getPosition().y+player.getRadius() > this.height) {
+            if (player.getPosition().x - player.getRadius() < 0 || player.getPosition().x + player.getRadius() > this.width || player.getPosition().y - player.getRadius() < 0 || player.getPosition().y + player.getRadius() > this.height) {
                 console.log(player.getName(), "collide with the wall")
                 collision = true
             }
@@ -262,9 +269,11 @@ export default class GameRoom {
      * @param {Player} player The player to remove 
      */
     public removePlayer(player: Player) {
-        this.players = this.players.filter((p) => p === player)
+        this.players = this.players.filter((p) => p !== player)
         if (this.players.length === 0) return GameServer.removeRoom(this.id)
         else if (this.moderator === player) this.moderator = this.players[0]
+        player.getSocket().leave(this.id)
+        io.to(this.id).emit('leaderboard', this.getPlayerInfos())
     }
 
     private getPlayerInfos() {

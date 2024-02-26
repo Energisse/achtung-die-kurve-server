@@ -8,9 +8,9 @@ import { v4 as uuidv4 } from 'uuid';
 export default class Player extends Circle {
 
     /**
-     * Unique identifier
+     * Socket of the player
      */
-    private id = uuidv4()
+    private socket: Socket
 
     /**
      * Name of the player
@@ -67,8 +67,9 @@ export default class Player extends Circle {
      * @param {Socket} socket The socket of the player
      * @param {string} name The name of the player
      */
-    constructor(name: string) {
+    constructor(name: string, socket: Socket) {
         super(new Dot(0, 0), 3)
+        this.socket = socket
         this.name = name
     }
 
@@ -247,7 +248,7 @@ export default class Player extends Circle {
      * @returns {string} The id of the player
      */
     public getID() {
-        return this.id
+        return this.socket.id
     }
 
     /**
@@ -264,5 +265,13 @@ export default class Player extends Circle {
      */
     public setRadius(radius: number) {  
         this.radius = radius
+    }
+
+    /**
+     * Get the socket of the player
+     * @returns 
+     */
+    public getSocket() {
+        return this.socket
     }
 }
