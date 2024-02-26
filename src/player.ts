@@ -225,7 +225,7 @@ export default class Player extends Circle {
      * @returns {Circle} The position of the player
      */
     public getPosition(): Circle {
-        return this;
+        return new Circle(new Dot(this.x, this.y), this.radius);
     }
 
     /**
