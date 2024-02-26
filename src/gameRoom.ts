@@ -1,13 +1,12 @@
+import { Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import GameServer from './gameServer';
-import { io } from './server';
 import Player from "./player";
 import PowerUp from './powerUp/powerUp';
-import SpeedPowerUp from './powerUp/speedPowerUp';
+import PowerUpManager from './powerUp/powerUpManager';
+import { io } from './server';
 import Circle from './shape/circle';
 import Line from './shape/line';
-import { Socket } from 'socket.io';
-import PowerUpManager from './powerUp/powerUpManager';
 
 export default class GameRoom {
 

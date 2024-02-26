@@ -3,7 +3,7 @@ import Circle from "../shape/circle"
 import Dot from "../shape/dot"
 import { v4 as uuidv4 } from 'uuid';
 
-export type PowerUpType = "speed-increase" | "head-increase"
+export type PowerUpType = "speed-increase" | "head-increase" | "speed-decrease" | "head-decrease" 
 
 export default abstract class PowerUp extends Circle {
 

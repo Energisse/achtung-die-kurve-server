@@ -1,9 +1,11 @@
 import PowerUp from "./powerUp"
-import SpeedPowerUp from "./speedPowerUp"
 import Player from "../player";
 import GameRoom from "../gameRoom";
-import BigHeadPowerUp from "./bigHeadPowerUp";
-import TypedEventEmitter from "../TypedEventEmitter";
+import HeadDecreasePowerUp from "./HeadDecreasePowerUp";
+import HeadIncreasePowerUp from "./HeadIncreasePowerUp";
+import TypedEventEmitter from "../typedEventEmitter";
+import SpeedIncreasePowerUp from "./speedIncreasePowerUp";
+import SpeedDecreasePowerUp from "./speedDecreasePowerUp";
 
 export default class PowerUpManager extends TypedEventEmitter<{
     'powerUp:Added': [PowerUp],
@@ -32,8 +34,10 @@ export default class PowerUpManager extends TypedEventEmitter<{
     constructor() {
         super()
         this.powerUps = [
-            SpeedPowerUp,
-            BigHeadPowerUp
+            SpeedIncreasePowerUp,
+            SpeedDecreasePowerUp,
+            HeadDecreasePowerUp,
+            HeadIncreasePowerUp
         ]
     }
 
@@ -43,7 +47,6 @@ export default class PowerUpManager extends TypedEventEmitter<{
     public tick(tick: number,players :Player[])  {
         if (this.activePowerUps.length > 0) {
             this.activePowerUps = this.activePowerUps.filter((activePowerUp) => {
-                console.log(activePowerUp.remainingTicks)
                 activePowerUp.remainingTicks--;
                 if (activePowerUp.remainingTicks <= 0) {
                     activePowerUp.powerUp.unapplyEffect()
@@ -70,7 +73,7 @@ export default class PowerUpManager extends TypedEventEmitter<{
         }
 
 
-        if(Math.random() < 0.001) {
+        if(Math.random() < 0.005) {
             const powerUp = new this.powerUps[Math.floor(Math.random() * this.powerUps.length)]()
             this.currentPowerUps.push(powerUp)
             this.emit('powerUp:Added', powerUp)

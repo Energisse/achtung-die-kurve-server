@@ -1,7 +1,7 @@
 import Player from "../player"
 import PowerUp from "./powerUp"
 
-export default class SpeedPowerUp extends PowerUp {
+export default class SpeedIncreasePowerUp extends PowerUp {
 
     constructor() {
         super(5,"speed-increase")

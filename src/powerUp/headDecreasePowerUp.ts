@@ -1,10 +1,10 @@
 import Player from "../player"
 import PowerUp from "./powerUp"
 
-export default class BigHeadPowerUp extends PowerUp {
+export default class HeadDecreasePowerUp extends PowerUp {
 
     constructor() {
-        super(10,"head-increase")
+        super(10,"head-decrease")
     }
 
     /**
@@ -12,7 +12,7 @@ export default class BigHeadPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public applyEffectToPlayer(player: Player): void {
-        player.setRadius(player.getRadius() * 5)
+        player.setRadius(player.getRadius() / 2)
     }
 
     /**
@@ -20,6 +20,6 @@ export default class BigHeadPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public unapplyEffectToPlayer(player: Player): void {
-        player.setRadius(player.getRadius() / 5)
+        player.setRadius(player.getRadius() * 2)
     }
 }
