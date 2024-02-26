@@ -2,6 +2,7 @@ import { createServer } from 'http';
 import { Server } from "socket.io";
 import GameServer from './gameServer';
 import Player from './player';
+import fs from 'fs/promises';
 
 const server = createServer();
 export const io = new Server(server, {
@@ -47,5 +48,25 @@ io.on('connection', (socket) => {
         callback()
     });
 });
+
+server.on("request", (req, res) => {
+    res.statusCode = 200;
+    let root = "./build";
+
+    let path = root + req.url;
+
+    if (path == root + "/") {
+        path = path + "index.html";
+    }
+
+    fs.readFile(path)
+        .then(file => {
+            res.end(file, 'utf-8');
+        }).catch(err => {
+            if (req.url != "/favicon.ico") return fs.readFile(root + "/index.html");
+        }).then(file => {
+            res.end(file);
+        })
+})
 
 export default server
