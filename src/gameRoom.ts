@@ -146,17 +146,18 @@ export default class GameRoom {
             }
         })
 
-        socketPlayer.on('start', () => {
+        socketPlayer.on('start', (callback) => {
             //Check if the game is already started
-            if (this.interval) return
+            if (this.interval) return callback(false)
 
             //Check if there are enough players
-            if (this.players.length < 2) return
+            if (this.players.length < 2) return callback(false)
 
             //Check if the player is the moderator
-            if (this.moderator !== player) return
+            if (this.moderator !== player) return callback(false)
 
             this.startGame()
+            callback(true)
         })
         return true
     }
@@ -269,7 +270,11 @@ export default class GameRoom {
      */
     public removePlayer(player: Player) {
         this.players = this.players.filter((p) => p !== player)
-        if (this.players.length === 0) return GameServer.removeRoom(this.id)
+        if (this.players.length === 0) {
+            if(this.interval)clearInterval(this.interval)
+            GameServer.removeRoom(this.id)
+            return
+        }
         else if (this.moderator === player) this.moderator = this.players[0]
         player.getSocket().leave(this.id)
         io.to(this.id).emit('leaderboard', this.getPlayerInfos())
@@ -319,8 +324,15 @@ export default class GameRoom {
      * Get the tick rate of the room 
      * @returns {number} The tick rate of the room 
      */
-    public static getTickRate() {
+    public static getTickRate(): number {
         return this.staticTickRate
     }
 
+    /**
+     * Check if the game is started
+     * @returns {boolean} True if the game is started, false otherwise
+     */
+    public isStarted(): boolean {
+        return this.interval !== null
+    }
 }

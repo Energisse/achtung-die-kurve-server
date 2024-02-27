@@ -1,16 +1,20 @@
+import express from 'express';
 import { createServer } from 'http';
 import { Server } from "socket.io";
 import GameServer from './gameServer';
 import Player from './player';
-import fs from 'fs/promises';
+import path from 'path';
 
-const server = createServer();
+const app = express();
+const server = createServer(app);
 export const io = new Server(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
     }
 });
+
+app.use(express.static(path.join(__dirname ,'/../build')));
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -23,6 +27,7 @@ io.on('connection', (socket) => {
         next()
     })
     socket.on('create', (name: string, callback) => {
+        console.log('create')
         socket.player = new Player(name,socket)
         GameServer.createRoom(socket)
         socket.removeAllListeners('create')
@@ -49,24 +54,9 @@ io.on('connection', (socket) => {
     });
 });
 
-server.on("request", (req, res) => {
-    res.statusCode = 200;
-    let root = "./build";
-
-    let path = root + req.url;
-
-    if (path == root + "/") {
-        path = path + "index.html";
-    }
-
-    fs.readFile(path)
-        .then(file => {
-            res.end(file, 'utf-8');
-        }).catch(err => {
-            if (req.url != "/favicon.ico") return fs.readFile(root + "/index.html");
-        }).then(file => {
-            res.end(file);
-        })
+app.get('/', (req, res) => {
+    console.log(path.join(__dirname ,'/../build/index.html'))
+    res.sendFile(path.join(__dirname ,'/../build/index.html'));
 })
 
 export default server
