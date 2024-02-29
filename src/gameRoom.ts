@@ -8,6 +8,12 @@ import { io } from './server';
 import Circle from './shape/circle';
 import Line from './shape/line';
 
+export enum GameRoomStatus {
+    WAITING = "waiting",
+    PLAYING = "playing",
+    PAUSED = "paused"
+}
+
 export default class GameRoom {
 
     /**
@@ -69,6 +75,11 @@ export default class GameRoom {
      * Current tick
      */
     private currentTick = 0
+
+    /**
+     * Status of the room
+     */
+    private status:GameRoomStatus = GameRoomStatus.WAITING;
 
     /**
      * Constructor of the room
@@ -147,18 +158,27 @@ export default class GameRoom {
         })
 
         socketPlayer.on('start', (callback) => {
-            //Check if the game is already started
-            if (this.interval) return callback(false)
-
-            //Check if there are enough players
-            if (this.players.length < 2) return callback(false)
-
-            //Check if the player is the moderator
-            if (this.moderator !== player) return callback(false)
+            if (
+                this.isStarted() || //Game already started
+                this.players.length < 2 || //Not enough players
+                this.moderator !== player //Not the moderator
+            ) return callback(false)
 
             this.startGame()
             callback(true)
         })
+
+        socketPlayer.on("pause",(callback)=>{
+            if(this.status === GameRoomStatus.PLAYING){
+                this.status = GameRoomStatus.PAUSED
+                io.to(this.id).emit("paused")
+            }
+            else if(this.status === GameRoomStatus.PAUSED){
+                this.status = GameRoomStatus.PLAYING
+                io.to(this.id).emit("resumed")
+            }
+            callback(this.status)
+        });
         return true
     }
 
@@ -166,6 +186,7 @@ export default class GameRoom {
      * Start the game
      */
     private startGame() {
+        this.status = GameRoomStatus.PLAYING
         this.currentTick = 0
         io.to(this.id).emit('start')
         this.powerUpManager.reset()
@@ -177,6 +198,7 @@ export default class GameRoom {
             const y = Math.random() * this.height
             p.setPositions(x, y)
         })
+
         this.interval = setInterval(() => {
             this.tick()
         }, 1000 / GameRoom.staticTickRate)
@@ -186,6 +208,9 @@ export default class GameRoom {
      * Send the new positions of the players to the clients
      */
     private tick() {
+        //Pause the game
+        if(this.status === GameRoomStatus.PAUSED) return
+        
         this.currentTick++;
 
         this.powerUpManager.tick(this.currentTick, this.players)
@@ -335,6 +360,14 @@ export default class GameRoom {
      * @returns {boolean} True if the game is started, false otherwise
      */
     public isStarted(): boolean {
-        return this.interval !== null
+        return this.status !== GameRoomStatus.WAITING
+    }
+
+    /**
+     * Get the status of the room
+     * @returns {GameRoomStatus} The status of the room
+     */
+    public getStatus(): GameRoomStatus {
+        return this.status
     }
 }

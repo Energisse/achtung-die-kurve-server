@@ -2,6 +2,7 @@ import { io } from "socket.io-client";
 import server from "../src/server";
 import GameServer from "../src/gameServer";
 import waitForExpect from "wait-for-expect";
+import { GameRoomStatus } from "../src/gameRoom";
 
 const client = io('http://localhost:' + process.env.PORT, {
     autoConnect: false
@@ -71,7 +72,6 @@ describe('Server rooms', () => {
     test('Moderator change room on disconnect', (done) => {
         client.emit('create', 'alban', (res: boolean) => {
             expect(res).toBe(true)
-
             client2.emit('join', GameServer.getAllRooms().at(0)?.getID(), 'thomas', async (res: boolean) => {
                 expect(res).toBe(true)
                 client.disconnect()
@@ -140,6 +140,28 @@ describe('Server rooms', () => {
             })
         })
     });
+
+    test("Pause a started game", (done) => {
+        client.emit('create', 'alban', (res: boolean) => {
+            expect(res).toBe(true)
+            client2.emit('join', GameServer.getAllRooms().at(0)?.getID(), 'thomas', (res: boolean) => {
+                expect(res).toBe(true)
+                client.emit('start', (res: boolean) => {
+                    expect(res).toBe(true)
+                    expect(GameServer.getAllRooms().at(0)?.getStatus()).toBe(GameRoomStatus.PLAYING)
+                    client.emit('pause', (res: boolean) => {
+                        expect(res).toBe(GameRoomStatus.PAUSED)
+                        expect(GameServer.getAllRooms().at(0)?.getStatus()).toBe(GameRoomStatus.PAUSED)
+                        client.emit('pause', (res: boolean) => {
+                            expect(res).toBe(GameRoomStatus.PLAYING)
+                            expect(GameServer.getAllRooms().at(0)?.getStatus()).toBe(GameRoomStatus.PLAYING)
+                            done()
+                        })
+                    })
+                })
+            })
+        })
+    })
 
 
     test("Alban est méchant", () => {
