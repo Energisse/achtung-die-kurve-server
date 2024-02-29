@@ -1,10 +1,10 @@
 import Player from "../player"
 import PowerUp from "./powerUp"
 
-export default class SpeedIncreasePowerUp extends PowerUp {
+export default class InvertedPowerUp extends PowerUp {
 
     constructor() {
-        super(10,"speed-increase")
+        super(10,"inverted")
     }
 
     /**
@@ -12,7 +12,7 @@ export default class SpeedIncreasePowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public applyEffectToPlayer(player: Player): void {
-        player.setSpeed(player.getSpeed() * 2)
+        player.setInverted(!player.getInverted())
     }
 
     /**
@@ -20,6 +20,6 @@ export default class SpeedIncreasePowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public unapplyEffectToPlayer(player: Player): void {
-        player.setSpeed(player.getSpeed() / 2)
+        player.setInverted(!player.getInverted())
     }
 }

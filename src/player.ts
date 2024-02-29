@@ -3,9 +3,8 @@ import Circle from "./shape/circle";
 import { Tail } from "./tail";
 import Line from "./shape/line";
 import Dot from "./shape/dot";
-import { v4 as uuidv4 } from 'uuid';
 
-export default class Player extends Circle {
+export default class Player extends Circle{
 
     /**
      * Socket of the player
@@ -63,6 +62,21 @@ export default class Player extends Circle {
     private speed: number = 1
 
     /**
+     * If the player's controls are inverted
+     */
+    private inverted: boolean = false
+
+    /**
+     * If the player is invincible (can't die from collision with other player's lines but no tail is added to the player's tail)
+     */
+    private invincible: number = 0
+
+    /**
+     * If the player is chuck norris (can't die from collision with other player (except if they are chuck norris too) and if they collide with a line, the line is destroyed) 
+     */
+    private chucknorris: number = 0
+
+    /**
      * Constructor of the player
      * @param {Socket} socket The socket of the player
      * @param {string} name The name of the player
@@ -80,7 +94,7 @@ export default class Player extends Circle {
         const lastX = this.x
         const lastY = this.y
 
-        this.angle += this.direction
+        this.angle += this.direction * (this.inverted  ? -1 : 1)
 
         //Add random holes in the line
         let invisible = false
@@ -97,7 +111,7 @@ export default class Player extends Circle {
         this.x = this.x + Math.cos(this.angle) * this.speed
         this.y = this.y + Math.sin(this.angle) * this.speed
 
-        if (invisible) return
+        if (invisible || this.invincible) return
 
         this.tail.addPart(new Line(new Dot(lastX, lastY), new Dot(this.x, this.y), this.lineWidth))
     }
@@ -108,10 +122,40 @@ export default class Player extends Circle {
      * @returns {boolean} True if the player collide with another player, false otherwise
      */
     public collide(player: Player): boolean {
+        if(this.invincible) return false
+
         let selfMargin = 0
-        if (this !== player && super.collide(player)) return true
+
+        if (this !== player && super.collide(player)){
+            //If the other player is chuck norris
+            if(player.chucknorris) return true
+            //If the player is chuck norris and the other player is not
+            if(this.chucknorris) return false
+            //They are not chuck norris
+            return true
+        }
 
         if (this === player) selfMargin = 100
+
+        if(this.chucknorris){
+            let collided:number[] = []
+            //TODO: enhance this
+            const margin = 10
+            this.radius += margin
+            for (let i = 0; i < player.tail.getParts().length - selfMargin; i++) {
+                if (super.collide(player.tail.getParts().at(i)!)) {
+                    collided.push(i)
+                }
+            }
+            this.radius -= margin
+            if(collided.length == 0) return false
+            this.socket.emit('tail:Removed', {
+                player: player.getID(),
+                parts: collided
+            })
+            player.tail.removeParts(collided)
+            return false
+        }
 
         for (let i = 0; i < player.tail.getParts().length - selfMargin; i++) {
             if (super.collide(player.tail.getParts().at(i)!)) {
@@ -273,5 +317,85 @@ export default class Player extends Circle {
      */
     public getSocket() {
         return this.socket
+    }
+
+    /**
+     * Get the inverted of the player
+     * @returns
+     */
+    public getInverted() {
+        return this.inverted
+    }
+
+    /**
+     * Set the inverted of the player
+     * @param inverted 
+     */
+    public setInverted(inverted: boolean) {
+        this.inverted = inverted
+    }
+
+    /**
+     * Get the angle of the player
+     * @returns 
+     */
+    public getAngle() {
+        return this.angle
+    }
+
+    /**
+     * Set the angle of the player
+     * @param angle 
+     */
+    public setAngle(angle: number) {
+        this.angle = angle
+    }
+
+    /**
+     * Get the line width of the player
+     * @returns 
+     */
+    public getLineWidth() {
+        return this.lineWidth
+    }
+
+    /**
+     * Set the line width of the player
+     * @param lineWidth 
+     */
+    public setLineWidth(lineWidth: number) {
+        this.lineWidth = lineWidth
+    }
+
+    /**
+     * Get the invincible of the player
+     * @returns 
+     */
+    public getInvincible() {
+        return this.invincible
+    }
+
+    /**
+     * Set the invincible of the player
+     * @param invincible 
+     */
+    public setInvincible(invincible: number) {
+        this.invincible = invincible
+    }
+
+    /**
+     * Get the chuck norris of the player
+     * @returns 
+     */
+    public getChuckNorris() {
+        return this.chucknorris
+    }
+
+    /**
+     * Set the chuck norris of the player
+     * @param chucknorris 
+     */
+    public setChuckNorris(chucknorris: number) {
+        this.chucknorris = chucknorris
     }
 }

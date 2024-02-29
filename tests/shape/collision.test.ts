@@ -70,4 +70,32 @@ describe("Circle/line collision", () => {
         const collided = collisionDetector.collisionBetweenCircleAndLine(circle, line)
         expect(collided).toBe(true);
     })
+
+    test("Circle inside line", () => {
+        const circle = new Circle(new Dot(0, 0), 0.5)
+        const line = new Line(new Dot(0, 0), new Dot(1, 0), 3)
+        const collided = collisionDetector.collisionBetweenCircleAndLine(circle, line)
+        expect(collided).toBe(true);
+    })
+
+    test("Circle inside line horizontal", () => {
+        const circle = new Circle(new Dot(0, 0), 0.5)
+        const line = new Line(new Dot(0, 2), new Dot(3, 2), 10)
+        const collided = collisionDetector.collisionBetweenCircleAndLine(circle, line)
+        expect(collided).toBe(true);
+    })
+
+    test("Circle inside line vertical", () => {
+        const circle = new Circle(new Dot(0, 0), 0.5)
+        const line = new Line(new Dot(2, -2), new Dot(2, 2), 10)
+        const collided = collisionDetector.collisionBetweenCircleAndLine(circle, line)
+        expect(collided).toBe(true);
+    })
+
+    test("Circle inside line diagonal", () => {
+        const circle = new Circle(new Dot(0, 0), 0.5)
+        const line = new Line(new Dot(1, 0), new Dot(2, 2), 10)
+        const collided = collisionDetector.collisionBetweenCircleAndLine(circle, line)
+        expect(collided).toBe(true);
+    })
 })

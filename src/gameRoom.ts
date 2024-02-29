@@ -207,10 +207,12 @@ export default class GameRoom {
 
             const newTail = player.getTail().getParts().at(-1);
             const tickPlayer: {
+                id: string
                 newTail?: Line
                 position: Circle
                 color: string
             } = {
+                id: player.getID(),
                 position: player.getPosition(),
                 color: player.getColor()
             }

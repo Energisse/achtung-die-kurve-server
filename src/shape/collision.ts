@@ -17,6 +17,7 @@ export const collisionBetweenLineAndLine = ({ p1: { x: x1, y: y1 }, p2: { x: x2,
     return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
 }
 
+//TODO: memoize line to rectangle collision
 export const collisionBetweenCircleAndLine = (circle: Circle, { p1, p2, width: lineWidth }: Line) => {
 
     const rectCenterX = (p1.x + p2.x) / 2;

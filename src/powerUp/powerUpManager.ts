@@ -6,6 +6,11 @@ import HeadIncreasePowerUp from "./headIncreasePowerUp";
 import TypedEventEmitter from "../typedEventEmitter";
 import SpeedIncreasePowerUp from "./speedIncreasePowerUp";
 import SpeedDecreasePowerUp from "./speedDecreasePowerUp";
+import LineDecreasePowerUp from "./lineDecreasePowerUp";
+import LineIncreasePowerUp from "./lineIncreasePowerUp";
+import InvertedPowerUp from "./invertedPowerUp";
+import ChucknorrisPowerUp from "./chucknorrisPowerUp";
+import InvinciblePowerUp from "./invinciblePowerUp";
 
 export default class PowerUpManager extends TypedEventEmitter<{
     'powerUp:Added': [PowerUp],
@@ -34,6 +39,11 @@ export default class PowerUpManager extends TypedEventEmitter<{
     constructor() {
         super()
         this.powerUps = [
+            ChucknorrisPowerUp,
+            InvinciblePowerUp,
+            InvertedPowerUp,
+            LineDecreasePowerUp,
+            LineIncreasePowerUp,
             SpeedIncreasePowerUp,
             SpeedDecreasePowerUp,
             HeadDecreasePowerUp,
