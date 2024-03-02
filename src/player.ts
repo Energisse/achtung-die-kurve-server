@@ -3,9 +3,20 @@ import Circle from "./shape/circle";
 import { Tail } from "./tail";
 import Line from "./shape/line";
 import Dot from "./shape/dot";
+import TypedEventEmitter from "./typedEventEmitter";
 
-export default class Player extends Circle{
+export default class Player extends TypedEventEmitter<{
+    'tail:Removed': [number[]],
+    'tail:Added': [Line],
+    'moved': [Circle],
+    'killed': []
+}>{
 
+    /**
+     * Head of the player
+     */
+    private head: Circle;
+    
     /**
      * Socket of the player
      */
@@ -82,7 +93,8 @@ export default class Player extends Circle{
      * @param {string} name The name of the player
      */
     constructor(name: string, socket: Socket) {
-        super(new Dot(0, 0), 3)
+        super()
+        this.head = new Circle(new Dot(0, 0), 3)
         this.socket = socket
         this.name = name
     }
@@ -91,14 +103,14 @@ export default class Player extends Circle{
      * Update the position of the player
      */
     public tick(tick: number) {
-        const lastX = this.x
-        const lastY = this.y
+        const lastCenter = this.head.getCenter();
 
         this.angle += this.direction * (this.inverted  ? -1 : 1)
 
         //Add random holes in the line
         let invisible = false
         if (this.lineHoleTime == 0) {
+            //TODO: remove magic number
             if (Math.random() < 1 / (5 * 128)) {
                 this.lineHoleTime = 24
             }
@@ -108,27 +120,28 @@ export default class Player extends Circle{
             this.lineHoleTime--
         }
 
-        this.x = this.x + Math.cos(this.angle) * this.speed
-        this.y = this.y + Math.sin(this.angle) * this.speed
+        this.head.x += Math.cos(this.angle) * this.speed
+        this.head.y += Math.sin(this.angle) * this.speed
+        this.emit('moved', new Circle(this.head.getCenter(), this.head.radius))
 
         if (invisible || this.invincible) return
 
-        this.tail.addPart(new Line(new Dot(lastX, lastY), new Dot(this.x, this.y), this.lineWidth))
+        this.tail.addPart(new Line(lastCenter, this.head.getCenter(), this.lineWidth))
+        this.emit('tail:Added', this.tail.getParts().at(-1)!)
     }
 
     /**
      * Check if the player collide with another player
      * @param player The player to check the collision with
-     * @returns {boolean} True if the player collide with another player, false otherwise
      */
     public collide(player: Player): boolean {
         if(this.invincible) return false
 
         let selfMargin = 0
 
-        if (this !== player && super.collide(player)){
+        if (this !== player && this.head.collide(player.head)){
             //If the other player is chuck norris
-            if(player.chucknorris) return true
+            if(player.chucknorris) return  false
             //If the player is chuck norris and the other player is not
             if(this.chucknorris) return false
             //They are not chuck norris
@@ -139,28 +152,23 @@ export default class Player extends Circle{
 
         if(this.chucknorris){
             let collided:number[] = []
-            //TODO: enhance this
+            //TODO: enhance this with another circle bigger than the player's circle
             const margin = 10
-            this.radius += margin
+            this.head.radius += margin
             for (let i = 0; i < player.tail.getParts().length - selfMargin; i++) {
-                if (super.collide(player.tail.getParts().at(i)!)) {
+                if (this.head.collide(player.tail.getParts().at(i)!)) {
                     collided.push(i)
                 }
             }
-            this.radius -= margin
+            this.head.radius -= margin
             if(collided.length == 0) return false
-            this.socket.emit('tail:Removed', {
-                player: player.getID(),
-                parts: collided
-            })
             player.tail.removeParts(collided)
+            this.emit('tail:Removed', collided)
             return false
         }
 
         for (let i = 0; i < player.tail.getParts().length - selfMargin; i++) {
-            if (super.collide(player.tail.getParts().at(i)!)) {
-                console.log(player.tail.getParts().at(i))
-                console.log(player.getPosition())
+            if (this.head.collide(player.tail.getParts().at(i)!)) {
                 return true
             }
         }
@@ -197,16 +205,27 @@ export default class Player extends Circle{
      * @param {number} x The x position of the player
      * @param {number} y The y position of the player
      */
-    public setPositions(x: number, y: number) {
-        this.x = x
-        this.y = y
+    public setPositions(x: number, y: number):void;
+    /**
+     * Set the positions of the player
+     * @param {Dot} center The center of the player
+     */
+    public setPositions(center: Dot):void;
+    public setPositions(xOrCenter: number | Dot, y: number = 0):void {
+        if (xOrCenter instanceof Dot) {
+            this.head.setCenter(xOrCenter);
+        } else {
+            this.head.setCenter(xOrCenter, y);
+        }
     }
 
     /**
      * Kill the player
      */
     public kill() {
+        console.log('kill ' + this.name + ' !')
         this.alive = false
+        this.emit("killed");
     }
 
     /**
@@ -269,7 +288,7 @@ export default class Player extends Circle{
      * @returns {Circle} The position of the player
      */
     public getPosition(): Circle {
-        return new Circle(new Dot(this.x, this.y), this.radius);
+        return new Circle(this.head.getCenter(), this.head.radius)
     }
 
     /**
@@ -300,7 +319,7 @@ export default class Player extends Circle{
      * @returns 
      */
     public getRadius() {
-        return this.radius
+        return this.head.radius
     }   
 
     /**
@@ -308,7 +327,7 @@ export default class Player extends Circle{
      * @param radius 
      */
     public setRadius(radius: number) {  
-        this.radius = radius
+        this.head.radius = radius
     }
 
     /**

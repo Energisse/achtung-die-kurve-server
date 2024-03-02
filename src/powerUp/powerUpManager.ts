@@ -11,6 +11,7 @@ import LineIncreasePowerUp from "./lineIncreasePowerUp";
 import InvertedPowerUp from "./invertedPowerUp";
 import ChucknorrisPowerUp from "./chucknorrisPowerUp";
 import InvinciblePowerUp from "./invinciblePowerUp";
+import Tick from "../tick";
 
 export default class PowerUpManager extends TypedEventEmitter<{
     'powerUp:Added': [PowerUp],
@@ -54,7 +55,7 @@ export default class PowerUpManager extends TypedEventEmitter<{
     /**
      * Tick function
      */
-    public tick(tick: number,players :Player[])  {
+    public tick(tick: number, players :Player[])  {
         if (this.activePowerUps.length > 0) {
             this.activePowerUps = this.activePowerUps.filter((activePowerUp) => {
                 activePowerUp.remainingTicks--;
@@ -70,10 +71,10 @@ export default class PowerUpManager extends TypedEventEmitter<{
             let removed:number = 0
             this.currentPowerUps = this.currentPowerUps.filter((powerUp) => {
                 for (let player of players) {
-                    if (powerUp.collide(player)) {
+                    if (powerUp.collide(player.getPosition())) {
                         removed++;
                         powerUp.applyEffect(player,players)
-                        this.activePowerUps.push({powerUp, remainingTicks: powerUp.getDuration() * GameRoom.getTickRate()})
+                        this.activePowerUps.push({powerUp, remainingTicks: powerUp.getDuration() * Tick.staticTickRate})
                         return false
                     }
                 }

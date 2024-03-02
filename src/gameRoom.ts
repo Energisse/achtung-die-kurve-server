@@ -2,11 +2,12 @@ import { Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import GameServer from './gameServer';
 import Player from "./player";
-import PowerUp from './powerUp/powerUp';
+import PlayerManager from './playerManager';
 import PowerUpManager from './powerUp/powerUpManager';
 import { io } from './server';
-import Circle from './shape/circle';
-import Line from './shape/line';
+import Dot from './shape/dot';
+import Rectangle from './shape/rectangle';
+import Tick from './tick';
 
 export enum GameRoomStatus {
     WAITING = "waiting",
@@ -15,31 +16,16 @@ export enum GameRoomStatus {
 }
 
 export default class GameRoom {
-
+    
     /**
      * Unique identifier
      */
     private id = uuidv4()
 
     /**
-     * Array of players
+     * Player manager
      */
-    private players: Player[] = []
-
-    /**
-     * Moderator of the room
-     */
-    private moderator: Player
-
-    /**
-     * Array of colors
-     */
-    private static = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF"]
-
-    /**
-     * Max number of players
-     */
-    private maxPlayers = 5
+    private playerManager: PlayerManager;
 
     /**
      * Date of creation
@@ -47,312 +33,138 @@ export default class GameRoom {
     private created = new Date()
 
     /**
-     * Static tick rate
+     * board
      */
-    private static staticTickRate = 64
-
-    /**
-     * Width of the room
-     */
-    private width = 1000
-
-    /**
-     * Height of the room
-     */
-    private height = 1000
-
+    private board : Rectangle = new Rectangle(new Dot(0,0),1000,1000)
+    
     /**
      * Interval of the game
      */
-    private interval: NodeJS.Timeout | null = null
-
+    private tick: Tick
     /**
      * power up manager
      */
     private powerUpManager: PowerUpManager = new PowerUpManager()
 
     /**
-     * Current tick
-     */
-    private currentTick = 0
-
-    /**
      * Status of the room
      */
-    private status:GameRoomStatus = GameRoomStatus.WAITING;
+    private status: GameRoomStatus = GameRoomStatus.WAITING;
 
     /**
      * Constructor of the room
      * @param {Player} moderator The moderator of the room
      */
     constructor(socketPlayer: Socket) {
-        this.moderator = socketPlayer.player
-        this.addPlayer(socketPlayer)
+        this.playerManager = new PlayerManager(this)
+        this.tick = new Tick(this)
 
-        this.powerUpManager.on('powerUp:Added', ({ x, y, radius, id, type, other }: PowerUp) => {
-            io.to(this.id).emit('powerUp:Added', { x, y, radius, id, type, other })
-        })
-
-        this.powerUpManager.on('powerUp:Removed', (powerUp: PowerUp[]) => {
-            io.to(this.id).emit('powerUp:Removed', powerUp.map(({ id }) => (id)))
-        })
-    }
-
-    /**
-     * Check if the room is full
-     * @returns {boolean} True if the room is full, false otherwise
-     */
-    public isFull(): boolean {
-        return this.players.length >= this.maxPlayers
-    }
-
-    /**
-     * Add a player to the room
-     * @param {Player} player The player to add
-     * @returns {boolean} True if the player has been added, false otherwise
-     */
-    public addPlayer(socketPlayer: Socket): boolean {
-        const player = socketPlayer.player
-
-        //Check if the room is full
-        if (this.isFull()) return false
-        //Set the color of the player
-        player.setColor(this.static.filter((c) => !this.players.find((p) => p.getColor() === c))[0])
-
-        this.players.push(player)
-        //Manage player disconnection
-        socketPlayer.on('disconnect', () => {
-            this.removePlayer(player)
-        });
-
-        socketPlayer.join(this.id);
-
-        io.to(this.id).emit('leaderboard', this.getPlayerInfos())
-        socketPlayer.on('leaderboard', (callback) => {
-            callback(this.getPlayerInfos())
-        });
-
-        socketPlayer.on('direction', (msg) => {
-            switch (msg) {
-                case 'left':
-                    player.setDirection(-0.05)
-                    break;
-                case 'right':
-                    player.setDirection(0.05)
-                    break;
-                case 'forward':
-                    player.setDirection(0)
-                    break;
-                default:
-                    break;
+        this.playerManager.on('player:Removed', (player: Player) => {
+            this.emit("leaderboard", this.getPlayerManager().getPlayerInfos())
+            if(this.playerManager.getPlayers().length === 0){
+                this.tick.stop()
+                GameServer.removeRoom(this.id)
             }
         })
 
-        socketPlayer.on('kick', (id: string) => {
-            if (this.moderator !== player) return
-            const kicked = this.players.find((p) => p.getID() === id)
-            if (kicked) {
-                kicked.getSocket().emit('kicked');
-                this.removePlayer(kicked)
-            }
-        })
+        this.playerManager.on('player:Added', (player: Player) => {
+            const socket = player.getSocket()
+            socket.join(this.id)
+            this.emit("leaderboard", this.getPlayerManager().getPlayerInfos())
 
-        socketPlayer.on('start', (callback) => {
-            if (
-                this.isStarted() || //Game already started
-                this.players.length < 2 || //Not enough players
-                this.moderator !== player //Not the moderator
-            ) return callback(false)
-
-            this.startGame()
-            callback(true)
-        })
-
-        socketPlayer.on("pause",(callback)=>{
-            if(this.status === GameRoomStatus.PLAYING){
-                this.status = GameRoomStatus.PAUSED
-                io.to(this.id).emit("paused")
-            }
-            else if(this.status === GameRoomStatus.PAUSED){
-                this.status = GameRoomStatus.PLAYING
-                io.to(this.id).emit("resumed")
-            }
-            callback(this.status)
-        });
-        return true
+            socket.on('disconnect', () => {
+                this.playerManager.removePlayer(player.getID())
+            });
+            
+            socket.on('direction', (msg) => {
+                switch (msg) {
+                    case 'left':
+                        player.setDirection(-0.05)
+                        break;
+                    case 'right':
+                        player.setDirection(0.05)
+                        break;
+                    case 'forward':
+                        player.setDirection(0)
+                        break;
+                    default:
+                        break;
+                }
+            })
+    
+            socket.on('kick', (id: string) => {
+                if (!this.getPlayerManager().isModerator(player)) return
+                const kicked = this.playerManager.removePlayer(id)
+                if (kicked) {
+                    kicked.getSocket().emit('kicked');
+                }
+            })
+    
+            socket.on('start', (callback) => {
+                if (
+                    this.isStarted() || //Game already started
+                    this.getPlayerManager().getPlayers().length < 2 || //Not enough players
+                    !this.getPlayerManager().isModerator(player) //Not the moderator
+                ) return callback(false)
+    
+                this.startGame()
+                callback(true)
+            })
+    
+            socket.on("pause", (callback) => {
+                if (this.status === GameRoomStatus.PLAYING) {
+                    this.status = GameRoomStatus.PAUSED
+                    io.to(this.id).emit("paused")
+                }
+                else if (this.status === GameRoomStatus.PAUSED) {
+                    this.status = GameRoomStatus.PLAYING
+                    io.to(this.id).emit("resumed")
+                }
+                callback(this.status)
+            });
+        }) 
+        
+        this.playerManager.addPlayer(socketPlayer)
     }
 
     /**
      * Start the game
      */
-    private startGame() {
+    public startGame() {
         this.status = GameRoomStatus.PLAYING
-        this.currentTick = 0
         io.to(this.id).emit('start')
         this.powerUpManager.reset()
 
-        this.players.forEach((p) => {
+        this.playerManager.getPlayers().forEach((p) => {
             p.removeTail()
             p.revive()
-            const x = Math.random() * this.width
-            const y = Math.random() * this.height
+            const x = Math.random() * this.board.width
+            const y = Math.random() * this.board.height
             p.setPositions(x, y)
         })
 
-        this.interval = setInterval(() => {
-            this.tick()
-        }, 1000 / GameRoom.staticTickRate)
-    }
-
-    /**
-     * Send the new positions of the players to the clients
-     */
-    private tick() {
-        //Pause the game
-        if(this.status === GameRoomStatus.PAUSED) return
-        
-        this.currentTick++;
-
-        this.powerUpManager.tick(this.currentTick, this.players)
-
-        const newPositions: Array<{
-            position: Circle
-            newTail?: Line
-            color: string
-        } | null> = []
-
-        let killed: number = 0
-
-        this.players.forEach((player) => {
-            if (!player.isAlive()) {
-                newPositions.push(null);
-                return
-            }
-            player.tick(this.currentTick);
-
-            const newTail = player.getTail().getParts().at(-1);
-            const tickPlayer: {
-                id: string
-                newTail?: Line
-                position: Circle
-                color: string
-            } = {
-                id: player.getID(),
-                position: player.getPosition(),
-                color: player.getColor()
-            }
-
-            if (newTail?.p2.x === player.getPosition().x && newTail?.p2.y === player.getPosition().y) {
-                tickPlayer.newTail = newTail
-            }
-            newPositions.push(tickPlayer)
-
-
-            let collision = false
-            if (player.getPosition().x - player.getRadius() < 0 || player.getPosition().x + player.getRadius() > this.width || player.getPosition().y - player.getRadius() < 0 || player.getPosition().y + player.getRadius() > this.height) {
-                console.log(player.getName(), "collide with the wall")
-                collision = true
-            }
-            else {
-                for (let opponent of this.players) {
-                    if (player.collide(opponent)) {
-                        console.log(player.getName(), "collide with", opponent.getName())
-                        collision = true
-                        if (opponent !== player) opponent.addPoints(1)
-                        else opponent.addPoints(-1)
-                        killed++
-                        player.kill()
-
-                        break
-                    }
-                }
-            }
-
-            if (collision) {
-                player.kill()
-                killed++
-            }
-
-        })
-        if (killed) {
-            this.players.forEach((p) => {
-                if (p.isAlive()) p.addPoints(1)
-            });
-            io.to(this.id).emit('leaderboard', this.getPlayerInfos())
-        }
-        io.to(this.id).emit("tick", newPositions)
-
-        if (this.players.filter((p) => p.isAlive()).length < 2) {
-            clearInterval(this.interval!)
-            setTimeout(() => {
-                this.startGame()
-            }, 3000)
-            io.emit("end")
-        }
-    }
-
-    /**
-     * Remove a player from the room
-     * @param {Player} player The player to remove 
-     */
-    public removePlayer(player: Player) {
-        this.players = this.players.filter((p) => p !== player)
-        if (this.players.length === 0) {
-            if(this.interval)clearInterval(this.interval)
-            GameServer.removeRoom(this.id)
-            return
-        }
-        else if (this.moderator === player) this.moderator = this.players[0]
-        player.getSocket().leave(this.id)
-        io.to(this.id).emit('leaderboard', this.getPlayerInfos())
-    }
-
-    private getPlayerInfos() {
-        return this.players.map((p) => ({
-            name: p.getName(),
-            isModerator: this.moderator === p,
-            id: p.getID(),
-            color: p.getColor(),
-            alive: p.isAlive(),
-            points: p.getPoints()
-        }))
+        this.tick.start()
     }
 
     /**
      * Get the informations of the room
      * @returns {Object} The informations of the room
      */
-    public getInfos() {
+    public getInfos(): object {
         return {
             id: this.id,
-            players: this.players.length,
-            maxPlayers: this.maxPlayers,
+            players: this.playerManager.getPlayers().length,
+            maxPlayers: this.playerManager.getMaxPlayers(),
             created: this.created
         }
-    }
-
-    /**
-     * Get the moderator of the room
-     * @returns {Player} The moderator of the room
-     */
-    public getModerator(): Player {
-        return this.moderator
     }
 
     /**
      * Get the unique identifier of the room
      * @returns {string} The unique identifier of the room
      */
-    public getID() {
+    public getID(): string {
         return this.id
-    }
-
-    /**
-     * Get the tick rate of the room 
-     * @returns {number} The tick rate of the room 
-     */
-    public static getTickRate(): number {
-        return this.staticTickRate
     }
 
     /**
@@ -370,4 +182,38 @@ export default class GameRoom {
     public getStatus(): GameRoomStatus {
         return this.status
     }
+
+    /**
+     * Get the player manager
+     * @returns {PlayerManager} The player manager
+     */
+    public getPlayerManager(): PlayerManager {
+        return this.playerManager
+    }
+
+    /**
+     * Get the power up manager
+     * @returns {PowerUpManager} The power up manager
+     */
+    public getPowerUpManager(): PowerUpManager {
+        return this.powerUpManager
+    }
+
+    /**
+     * Emit an event to the room
+     * @param {string} event The event to emit
+     * @param {any[]} arg The arguments to send
+     */
+    public emit(event: string, ...arg: any[]) {
+        io.to(this.id).emit(event,...arg)
+    }
+    
+    /**
+     * Get the board
+     * @returns {Rectangle} The board
+     */
+    public getBoard(): Rectangle {
+        return this.board
+    }
+
 }

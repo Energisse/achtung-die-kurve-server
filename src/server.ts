@@ -40,7 +40,7 @@ io.on('connection', (socket) => {
         socket.player = new Player(name,socket)
         const server = GameServer.getAllRooms().find((s) => s.getID() === id)
         if (server && name) {
-            callback(server.addPlayer(socket))
+            callback(server.getPlayerManager().addPlayer(socket))
             socket.removeAllListeners('create')
             socket.removeAllListeners('join')
         }

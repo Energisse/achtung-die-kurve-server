@@ -39,7 +39,7 @@ describe('Server rooms', () => {
         client.emit('create', 'alban', (res: boolean) => {
             expect(res).toBe(true)
             expect(GameServer.getAllRooms().length).toBe(1)
-            expect(GameServer.getAllRooms().at(0)?.getModerator().getID()).toBe(client.id)
+            expect(GameServer.getAllRooms().at(0)?.getPlayerManager().getModerator()!.getID()).toBe(client.id)
             done();
         })
     });
@@ -48,11 +48,11 @@ describe('Server rooms', () => {
         client.emit('create', 'alban', (res: boolean) => {
             expect(res).toBe(true)
             expect(GameServer.getAllRooms().length).toBe(1)
-            expect(GameServer.getAllRooms().at(0)?.getModerator().getID()).toBe(client.id)
+            expect(GameServer.getAllRooms().at(0)?.getPlayerManager().getModerator()!.getID()).toBe(client.id)
             client2.emit('join', GameServer.getAllRooms().at(0)?.getID(), 'thomas', (res: boolean) => {
                 expect(res).toBe(true)
                 expect(GameServer.getAllRooms().length).toBe(1)
-                expect(GameServer.getAllRooms().at(0)?.getModerator().getID()).toBe(client.id)
+                expect(GameServer.getAllRooms().at(0)?.getPlayerManager().getModerator()!.getID()).toBe(client.id)
                 done()
             })
         })
@@ -77,7 +77,7 @@ describe('Server rooms', () => {
                 client.disconnect()
                 await waitForExpect(() => {
                     expect(GameServer.getAllRooms().length).toBe(1)
-                    expect(GameServer.getAllRooms().at(0)?.getModerator().getID()).toBe(client2.id)
+                    expect(GameServer.getAllRooms().at(0)?.getPlayerManager().getModerator()!.getID()).toBe(client2.id)
                 })
                 done()
             })
