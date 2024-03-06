@@ -60,7 +60,7 @@ export default class PowerUpManager extends TypedEventEmitter<{
     }
 
     public generatePowerUp() {
-        if (Math.random() < 0.05) {
+        if (Math.random() < 0.005) {
             const powerUp = new this.powerUps[Math.floor(Math.random() * this.powerUps.length)]()
             this.currentPowerUps.push(powerUp)
             this.gameRoom.getBoard().insert(powerUp)

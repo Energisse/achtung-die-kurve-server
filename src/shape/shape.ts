@@ -1,5 +1,3 @@
-import QuadTree from "../quadtree/quadtree";
-
 export default abstract class Shape {
 
     private static idCounter = 0;

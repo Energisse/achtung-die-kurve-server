@@ -1,7 +1,6 @@
-import draw from "./debug"
 import GameRoom from "./gameRoom"
+import Player from "./player"
 import PowerUp from "./powerUp/powerUp"
-import Circle from "./shape/circle"
 import PlayerTail from "./shape/playerTail"
 import TypedEventEmitter from "./typedEventEmitter"
 
@@ -9,7 +8,11 @@ export type TickData = {
     player: {
         added: Array<{
             id: string
-            position: Circle
+            position: {
+                x: number,
+                y: number,
+                radius: number
+            }
             color: string
         }>,
 
@@ -51,7 +54,7 @@ export default class Tick extends TypedEventEmitter<{
     /**
      * Static tick rate
      */
-    public static staticTickRate = 32
+    public static staticTickRate = 64
 
     /**
      * Game room
@@ -96,16 +99,13 @@ export default class Tick extends TypedEventEmitter<{
                 }
             }
 
-            if (this.tickNumber % 100 === 0) draw(this.gameroom)
-
-
             this.gameroom.getPowerUpManager().tick(this.tickNumber)
 
 
             const alivePlayers = this.gameroom.getPlayerManager().getPlayers().filter((p) => p.isAlive())
 
             alivePlayers.forEach((player) => {
-                player.tick(this.tickNumber, tickData)
+                player.tick(this.tickNumber)
                 player.detectCollision(this.gameroom.getBoard())
             })
 
@@ -119,7 +119,18 @@ export default class Tick extends TypedEventEmitter<{
             }
 
             this.gameroom.getBoard().getNewShapes().forEach((shape) => {
-                if (shape instanceof PowerUp) {
+                if (shape instanceof Player) {
+                    tickData.player.added.push({
+                        id: shape.getID(),
+                        position: {
+                            x: shape.x,
+                            y: shape.y,
+                            radius: shape.getRadius()
+                        },
+                        color: shape.getColor()
+                    })
+                }
+                else if (shape instanceof PowerUp) {
                     tickData.powerUp.added.push(shape)
                 }
                 else if (shape instanceof PlayerTail) {

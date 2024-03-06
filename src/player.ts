@@ -6,7 +6,6 @@ import Circle from "./shape/circle";
 import Dot from "./shape/dot";
 import PlayerTail from "./shape/playerTail";
 import { Tail } from "./tail";
-import { TickData } from "./tick";
 
 export default class Player extends Circle {
 
@@ -100,7 +99,7 @@ export default class Player extends Circle {
     /**
      * Update the position of the player
      */
-    public tick(tick: number, tickData: TickData) {
+    public tick(tick: number) {
         const lasPosition = this.getCenter()
         this.angle += this.direction * (this.inverted ? -1 : 1)
 
@@ -117,14 +116,12 @@ export default class Player extends Circle {
             this.lineHoleTime--
         }
 
+        this.gameroom.getBoard().remove(this)
+
         this.x += Math.cos(this.angle) * this.speed
         this.y += Math.sin(this.angle) * this.speed
 
-        tickData.player.added.push({
-            color: this.color,
-            id: this.socket.id,
-            position: new Circle(this.getCenter(), this.radius),
-        })
+        this.gameroom.getBoard().insert(this)
 
         if (invisible || this.invincible) return
 
@@ -141,16 +138,23 @@ export default class Player extends Circle {
         quadtree.query(circle).forEach((object) => {
             if (!this.isAlive()) return
             if (object instanceof Player) {
+                if (object === this) return
                 if (!object.isAlive()) return;
-                if (object.chucknorris || !this.chucknorris) {
+                if (!this.chucknorris) {
                     this.kill()
-                    this.addPoints(1)
-                    object.kill()
                     object.addPoints(1)
+                    if (!object.chucknorris) {
+                        object.kill()
+                        this.addPoints(1)
+                    }
                 }
                 else {
                     object.kill()
                     this.addPoints(1)
+                    if (object.chucknorris) {
+                        this.kill()
+                        object.addPoints(1)
+                    }
                 }
             }
             else if (object instanceof PlayerTail) {
