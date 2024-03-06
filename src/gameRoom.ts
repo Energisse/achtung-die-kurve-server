@@ -5,9 +5,9 @@ import Player from "./player";
 import PlayerManager from './playerManager';
 import PowerUpManager from './powerUp/powerUpManager';
 import { io } from './server';
-import Dot from './shape/dot';
 import Rectangle from './shape/rectangle';
 import Tick from './tick';
+import QuadTree from './quadtree/quadtree';
 
 export enum GameRoomStatus {
     WAITING = "waiting",
@@ -16,7 +16,7 @@ export enum GameRoomStatus {
 }
 
 export default class GameRoom {
-    
+
     /**
      * Unique identifier
      */
@@ -35,8 +35,8 @@ export default class GameRoom {
     /**
      * board
      */
-    private board : Rectangle = new Rectangle(new Dot(0,0),1000,1000)
-    
+    private board: QuadTree = new QuadTree(new Rectangle(0, 0, 1000, 1000))
+
     /**
      * Interval of the game
      */
@@ -44,7 +44,7 @@ export default class GameRoom {
     /**
      * power up manager
      */
-    private powerUpManager: PowerUpManager = new PowerUpManager()
+    private powerUpManager: PowerUpManager = new PowerUpManager(this)
 
     /**
      * Status of the room
@@ -61,7 +61,7 @@ export default class GameRoom {
 
         this.playerManager.on('player:Removed', (player: Player) => {
             this.emit("leaderboard", this.getPlayerManager().getPlayerInfos())
-            if(this.playerManager.getPlayers().length === 0){
+            if (this.playerManager.getPlayers().length === 0) {
                 this.tick.stop()
                 GameServer.removeRoom(this.id)
             }
@@ -75,7 +75,7 @@ export default class GameRoom {
             socket.on('disconnect', () => {
                 this.playerManager.removePlayer(player.getID())
             });
-            
+
             socket.on('direction', (msg) => {
                 switch (msg) {
                     case 'left':
@@ -91,7 +91,7 @@ export default class GameRoom {
                         break;
                 }
             })
-    
+
             socket.on('kick', (id: string) => {
                 if (!this.getPlayerManager().isModerator(player)) return
                 const kicked = this.playerManager.removePlayer(id)
@@ -99,18 +99,18 @@ export default class GameRoom {
                     kicked.getSocket().emit('kicked');
                 }
             })
-    
+
             socket.on('start', (callback) => {
                 if (
                     this.isStarted() || //Game already started
                     this.getPlayerManager().getPlayers().length < 2 || //Not enough players
                     !this.getPlayerManager().isModerator(player) //Not the moderator
                 ) return callback(false)
-    
+
                 this.startGame()
                 callback(true)
             })
-    
+
             socket.on("pause", (callback) => {
                 if (this.status === GameRoomStatus.PLAYING) {
                     this.status = GameRoomStatus.PAUSED
@@ -122,8 +122,8 @@ export default class GameRoom {
                 }
                 callback(this.status)
             });
-        }) 
-        
+        })
+
         this.playerManager.addPlayer(socketPlayer)
     }
 
@@ -134,12 +134,13 @@ export default class GameRoom {
         this.status = GameRoomStatus.PLAYING
         io.to(this.id).emit('start')
         this.powerUpManager.reset()
+        this.board.clear()
 
         this.playerManager.getPlayers().forEach((p) => {
-            p.removeTail()
             p.revive()
-            const x = Math.random() * this.board.width
-            const y = Math.random() * this.board.height
+            p.tail.clear()
+            const x = Math.random() * this.board.bounds.width
+            const y = Math.random() * this.board.bounds.height
             p.setPositions(x, y)
         })
 
@@ -205,14 +206,14 @@ export default class GameRoom {
      * @param {any[]} arg The arguments to send
      */
     public emit(event: string, ...arg: any[]) {
-        io.to(this.id).emit(event,...arg)
+        io.to(this.id).emit(event, ...arg)
     }
-    
+
     /**
      * Get the board
-     * @returns {Rectangle} The board
+     * @returns {QuadTree} The board
      */
-    public getBoard(): Rectangle {
+    public getBoard(): QuadTree {
         return this.board
     }
 

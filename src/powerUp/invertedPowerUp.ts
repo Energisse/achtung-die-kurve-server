@@ -4,7 +4,7 @@ import PowerUp from "./powerUp"
 export default class InvertedPowerUp extends PowerUp {
 
     constructor() {
-        super(10,"inverted")
+        super(10, "inverted")
     }
 
     /**

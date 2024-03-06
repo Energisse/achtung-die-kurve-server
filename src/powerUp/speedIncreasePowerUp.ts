@@ -4,7 +4,7 @@ import PowerUp from "./powerUp"
 export default class SpeedIncreasePowerUp extends PowerUp {
 
     constructor() {
-        super(10,"speed-increase")
+        super(10, "speed-increase")
     }
 
     /**

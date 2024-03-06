@@ -1,7 +1,8 @@
 import * as collisionDetector from "../../src/shape/collision"
 import Dot from "../../src/shape/dot"
-import Line from "../../src/shape/line"
 import Circle from "../../src/shape/circle"
+import Line from "../../src/shape/line"
+import Rectangle from "../../src/shape/rectangle"
 
 describe("Line/line collisions", () => {
     test("Simple non collision", () => {
@@ -97,5 +98,57 @@ describe("Circle/line collision", () => {
         const line = new Line(new Dot(1, 0), new Dot(2, 2), 10)
         const collided = collisionDetector.collisionBetweenCircleAndLine(circle, line)
         expect(collided).toBe(true);
+    })
+})
+
+
+describe("Rectangle/line collisions", () => {
+    test("Border collision", () => {
+        const rect = new Rectangle(0, 0, 10, 10);
+        const line = new Line(new Dot(0, 10.5), new Dot(10, 10.5), 1);
+        const collided = collisionDetector.collisionBetweenRectangleAndLine(rect, line);
+        expect(collided).toBe(true);
+    })
+
+    test("Simple collision", () => {
+        const rect = new Rectangle(0, 0, 10, 10);
+        const line = new Line(new Dot(5, 5), new Dot(15, 15), 1);
+        const collided = collisionDetector.collisionBetweenRectangleAndLine(rect, line);
+        expect(collided).toBe(true);
+    })
+
+    test("Line inside rectangle", () => {
+        const rect = new Rectangle(0, 0, 10, 10);
+        const line = new Line(new Dot(2, 2), new Dot(8, 8), 1);
+        const collided = collisionDetector.collisionBetweenRectangleAndLine(rect, line);
+        expect(collided).toBe(true);
+    })
+
+    test("Rectangle inside line", () => {
+        const rect = new Rectangle(2, 2, 6, 6);
+        const line = new Line(new Dot(0, 0), new Dot(10, 10), 20);
+        const collided = collisionDetector.collisionBetweenRectangleAndLine(rect, line);
+        expect(collided).toBe(true);
+    })
+
+    test("Rectangle inside line 2", () => {
+        const rect = new Rectangle(2, 2, 6, 6);
+        const line = new Line(new Dot(0, -2), new Dot(8, 6), 20);
+        const collided = collisionDetector.collisionBetweenRectangleAndLine(rect, line);
+        expect(collided).toBe(true);
+    })
+
+    test("Rectangle and line overlap", () => {
+        const rect = new Rectangle(0, 0, 10, 10);
+        const line = new Line(new Dot(5, 0), new Dot(5, 10), 1);
+        const collided = collisionDetector.collisionBetweenRectangleAndLine(rect, line);
+        expect(collided).toBe(true);
+    })
+
+    test("Rectangle and line do not overlap", () => {
+        const rect = new Rectangle(0, 0, 10, 10);
+        const line = new Line(new Dot(15, 0), new Dot(15, 10), 1);
+        const collided = collisionDetector.collisionBetweenRectangleAndLine(rect, line);
+        expect(collided).toBe(false);
     })
 })

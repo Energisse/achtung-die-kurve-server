@@ -1,8 +1,9 @@
 import Circle from "./circle";
 import { collisionBetweenCircleAndLine } from "./collision";
 import Dot from "./dot";
+import Shape from "./shape";
 
-export default class Line {
+export default class Line extends Shape {
 
     /**
      * First point of the line
@@ -26,6 +27,7 @@ export default class Line {
      * @param width The width of the line
      */
     constructor(p1: Dot, p2: Dot, width: number) {
+        super();
         this.p1 = p1;
         this.p2 = p2;
         this.width = width;

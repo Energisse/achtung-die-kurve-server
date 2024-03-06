@@ -4,7 +4,7 @@ import PowerUp from "./powerUp"
 export default class LineIncreasePowerUp extends PowerUp {
 
     constructor() {
-        super(10,"speed-decrease")
+        super(10, "speed-decrease")
     }
 
     /**
@@ -20,6 +20,6 @@ export default class LineIncreasePowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public unapplyEffectToPlayer(player: Player): void {
-        player.setLineWidth(player.getLineWidth() /2)
+        player.setLineWidth(player.getLineWidth() / 2)
     }
 }

@@ -4,7 +4,7 @@ import PowerUp from "./powerUp"
 export default class ChucknorrisPowerUp extends PowerUp {
 
     constructor() {
-        super(10,"chucknorris")
+        super(10, "chucknorris")
     }
 
     /**
@@ -12,7 +12,7 @@ export default class ChucknorrisPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public applyEffectToPlayer(player: Player): void {
-        player.setChuckNorris(player.getChuckNorris()+1)
+        player.setChuckNorris(player.getChuckNorris() + 1)
     }
 
     /**
@@ -20,6 +20,6 @@ export default class ChucknorrisPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public unapplyEffectToPlayer(player: Player): void {
-        player.setChuckNorris(player.getChuckNorris()-1)
+        player.setChuckNorris(player.getChuckNorris() - 1)
     }
 }

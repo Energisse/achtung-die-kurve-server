@@ -1,8 +1,8 @@
 import { collisionBetweenCircleAndCircle, collisionBetweenCircleAndLine } from "./collision";
 import Dot from "./dot";
 import Line from "./line";
-
-export default class Circle extends Dot {
+import Shape from "./shape";
+export default class Circle extends Shape {
 
     /**
      * Radius of the circle
@@ -10,12 +10,19 @@ export default class Circle extends Dot {
     public radius: number
 
     /**
+     * Center of the circle
+     */
+    public center: Dot
+
+    /**
      * Constructor of the circle
      * @param center The center of the circle
      * @param radius The radius of the circle
+     * @returns A new instance of the circle
      */
     constructor(center: Dot, radius: number) {
-        super(center.x, center.y)
+        super();
+        this.center = center;
         this.radius = radius
     }
 
@@ -37,7 +44,7 @@ export default class Circle extends Dot {
      * @returns The center of the circle
      */
     public getCenter(): Dot {
-        return new Dot(this.x, this.y);
+        return new Dot(this.center.x, this.center.y);
     }
 
     /**
@@ -53,11 +60,25 @@ export default class Circle extends Dot {
     public setCenter(center: Dot): void;
     public setCenter(xOrCenter: number | Dot, y: number = 0) {
         if (xOrCenter instanceof Dot) {
-            this.x = xOrCenter.x;
-            this.y = xOrCenter.y;
+            this.center = xOrCenter;
         } else {
-            this.x = xOrCenter;
-            this.y = y;
+            this.center = new Dot(xOrCenter, y);
         }
+    }
+
+    get x() {
+        return this.center.x;
+    }
+
+    get y() {
+        return this.center.y;
+    }
+
+    set x(value: number) {
+        this.center.x = value;
+    }
+
+    set y(value: number) {
+        this.center.y = value;
     }
 }

@@ -4,7 +4,7 @@ import PowerUp from "./powerUp"
 export default class HeadDecreasePowerUp extends PowerUp {
 
     constructor() {
-        super(10,"head-decrease")
+        super(10, "head-decrease")
     }
 
     /**

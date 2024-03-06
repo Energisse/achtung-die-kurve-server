@@ -4,7 +4,7 @@ import PowerUp from "./powerUp"
 export default class InvinciblePowerUp extends PowerUp {
 
     constructor() {
-        super(10,"invincible")
+        super(10, "invincible")
     }
 
     /**
@@ -12,7 +12,7 @@ export default class InvinciblePowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public applyEffectToPlayer(player: Player): void {
-        player.setInvincible(player.getInvincible()+1)
+        player.setInvincible(player.getInvincible() + 1)
     }
 
     /**
@@ -20,6 +20,6 @@ export default class InvinciblePowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public unapplyEffectToPlayer(player: Player): void {
-        player.setInvincible(player.getInvincible()-1)
+        player.setInvincible(player.getInvincible() - 1)
     }
 }

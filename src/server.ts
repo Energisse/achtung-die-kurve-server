@@ -14,7 +14,7 @@ export const io = new Server(server, {
     }
 });
 
-app.use(express.static(path.join(__dirname ,'/../build')));
+app.use(express.static(path.join(__dirname, '/../build')));
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -28,7 +28,7 @@ io.on('connection', (socket) => {
     })
     socket.on('create', (name: string, callback) => {
         console.log('create')
-        socket.player = new Player(name,socket)
+        socket.player = new Player(name, socket)
         GameServer.createRoom(socket)
         socket.removeAllListeners('create')
         socket.removeAllListeners('join')
@@ -37,7 +37,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on('join', (id: string, name: string, callback) => {
-        socket.player = new Player(name,socket)
+        socket.player = new Player(name, socket)
         const server = GameServer.getAllRooms().find((s) => s.getID() === id)
         if (server && name) {
             callback(server.getPlayerManager().addPlayer(socket))
@@ -55,8 +55,8 @@ io.on('connection', (socket) => {
 });
 
 app.get('/', (req, res) => {
-    console.log(path.join(__dirname ,'/../build/index.html'))
-    res.sendFile(path.join(__dirname ,'/../build/index.html'));
+    console.log(path.join(__dirname, '/../build/index.html'))
+    res.sendFile(path.join(__dirname, '/../build/index.html'));
 })
 
 export default server

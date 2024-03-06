@@ -1,22 +1,15 @@
 import { Socket } from "socket.io";
+import GameRoom from "./gameRoom";
+import PowerUp from "./powerUp/powerUp";
+import QuadTree from "./quadtree/quadtree";
 import Circle from "./shape/circle";
-import { Tail } from "./tail";
-import Line from "./shape/line";
 import Dot from "./shape/dot";
-import TypedEventEmitter from "./typedEventEmitter";
+import PlayerTail from "./shape/playerTail";
+import { Tail } from "./tail";
+import { TickData } from "./tick";
 
-export default class Player extends TypedEventEmitter<{
-    'tail:Removed': [number[]],
-    'tail:Added': [Line],
-    'moved': [Circle],
-    'killed': []
-}>{
+export default class Player extends Circle {
 
-    /**
-     * Head of the player
-     */
-    private head: Circle;
-    
     /**
      * Socket of the player
      */
@@ -30,7 +23,7 @@ export default class Player extends TypedEventEmitter<{
     /**
      * tail of the player
      */
-    private tail: Tail = new Tail();
+    public tail: Tail = new Tail(this);
 
     /**
      * Direction of the player
@@ -88,13 +81,18 @@ export default class Player extends TypedEventEmitter<{
     private chucknorris: number = 0
 
     /**
+     * Game room of the player
+     * define when the player join a game room
+     */
+    public gameroom!: GameRoom
+
+    /**
      * Constructor of the player
      * @param {Socket} socket The socket of the player
      * @param {string} name The name of the player
      */
     constructor(name: string, socket: Socket) {
-        super()
-        this.head = new Circle(new Dot(0, 0), 3)
+        super(new Dot(0, 0), 3)
         this.socket = socket
         this.name = name
     }
@@ -102,10 +100,9 @@ export default class Player extends TypedEventEmitter<{
     /**
      * Update the position of the player
      */
-    public tick(tick: number) {
-        const lastCenter = this.head.getCenter();
-
-        this.angle += this.direction * (this.inverted  ? -1 : 1)
+    public tick(tick: number, tickData: TickData) {
+        const lasPosition = this.getCenter()
+        this.angle += this.direction * (this.inverted ? -1 : 1)
 
         //Add random holes in the line
         let invisible = false
@@ -120,60 +117,72 @@ export default class Player extends TypedEventEmitter<{
             this.lineHoleTime--
         }
 
-        this.head.x += Math.cos(this.angle) * this.speed
-        this.head.y += Math.sin(this.angle) * this.speed
-        this.emit('moved', new Circle(this.head.getCenter(), this.head.radius))
+        this.x += Math.cos(this.angle) * this.speed
+        this.y += Math.sin(this.angle) * this.speed
+
+        tickData.player.added.push({
+            color: this.color,
+            id: this.socket.id,
+            position: new Circle(this.getCenter(), this.radius),
+        })
 
         if (invisible || this.invincible) return
 
-        this.tail.addPart(new Line(lastCenter, this.head.getCenter(), this.lineWidth))
-        this.emit('tail:Added', this.tail.getParts().at(-1)!)
+        this.tail.addPart(new PlayerTail(lasPosition, this.getCenter(), this.lineWidth, this))
     }
 
-    /**
-     * Check if the player collide with another player
-     * @param player The player to check the collision with
-     */
-    public collide(player: Player): boolean {
-        if(this.invincible) return false
-
-        let selfMargin = 0
-
-        if (this !== player && this.head.collide(player.head)){
-            //If the other player is chuck norris
-            if(player.chucknorris) return  false
-            //If the player is chuck norris and the other player is not
-            if(this.chucknorris) return false
-            //They are not chuck norris
-            return true
+    public detectCollision(quadtree: QuadTree) {
+        if (this.x - this.radius < 0 || this.x + this.radius > this.gameroom.getBoard().bounds.width || this.y - this.radius < 0 || this.y + this.radius > this.gameroom.getBoard().bounds.height) {
+            this.kill()
         }
-
-        if (this === player) selfMargin = 100
-
-        if(this.chucknorris){
-            let collided:number[] = []
-            //TODO: enhance this with another circle bigger than the player's circle
-            const margin = 10
-            this.head.radius += margin
-            for (let i = 0; i < player.tail.getParts().length - selfMargin; i++) {
-                if (this.head.collide(player.tail.getParts().at(i)!)) {
-                    collided.push(i)
+        if (this.invincible) return false
+        let circle = new Circle(this.getCenter(), this.radius)
+        if (this.chucknorris) circle.radius += 10
+        quadtree.query(circle).forEach((object) => {
+            if (!this.isAlive()) return
+            if (object instanceof Player) {
+                if (!object.isAlive()) return;
+                if (object.chucknorris || !this.chucknorris) {
+                    this.kill()
+                    this.addPoints(1)
+                    object.kill()
+                    object.addPoints(1)
+                }
+                else {
+                    object.kill()
+                    this.addPoints(1)
                 }
             }
-            this.head.radius -= margin
-            if(collided.length == 0) return false
-            player.tail.removeParts(collided)
-            this.emit('tail:Removed', collided)
-            return false
-        }
+            else if (object instanceof PlayerTail) {
+                if (object.player === this) {
+                    //Chek for lastest part of the tail of the player
+                    for (let i = this.tail.getParts().length - 1; i >= 0; i--) {
+                        //while they are colliding we skip to the next part
+                        if (circle.collide(this.tail.getParts()[i])) {
+                            //the tail is just added to the player so the player didn't die 
+                            if (this.tail.getParts()[i] === object) return
+                        }
+                        else {
+                            //the object is not a fresh tail so the player die
+                            break
+                        }
+                    }
+                }
 
-        for (let i = 0; i < player.tail.getParts().length - selfMargin; i++) {
-            if (this.head.collide(player.tail.getParts().at(i)!)) {
-                return true
+                if (this.chucknorris) {
+                    object.player.tail.removePart(object.id)
+                }
+                else {
+                    if (this === object.player) this.addPoints(-1)
+                    else object.player.addPoints(1)
+                    this.kill()
+                }
             }
-        }
-
-        return false
+            else if (object instanceof PowerUp) {
+                this.gameroom.getPowerUpManager().collide(this, object)
+                this.gameroom.getBoard().remove(object)
+            }
+        })
     }
 
     /**
@@ -205,17 +214,17 @@ export default class Player extends TypedEventEmitter<{
      * @param {number} x The x position of the player
      * @param {number} y The y position of the player
      */
-    public setPositions(x: number, y: number):void;
+    public setPositions(x: number, y: number): void;
     /**
      * Set the positions of the player
      * @param {Dot} center The center of the player
      */
-    public setPositions(center: Dot):void;
-    public setPositions(xOrCenter: number | Dot, y: number = 0):void {
+    public setPositions(center: Dot): void;
+    public setPositions(xOrCenter: number | Dot, y: number = 0): void {
         if (xOrCenter instanceof Dot) {
-            this.head.setCenter(xOrCenter);
+            this.setCenter(xOrCenter);
         } else {
-            this.head.setCenter(xOrCenter, y);
+            this.setCenter(xOrCenter, y);
         }
     }
 
@@ -223,9 +232,8 @@ export default class Player extends TypedEventEmitter<{
      * Kill the player
      */
     public kill() {
-        console.log('kill ' + this.name + ' !')
+        console.log('killed ' + this.name + ' !')
         this.alive = false
-        this.emit("killed");
     }
 
     /**
@@ -276,26 +284,11 @@ export default class Player extends TypedEventEmitter<{
     }
 
     /**
-     * Get the tail of the player
-     * @returns {Tail} The tail of the player
-     */
-    public getTail(): Tail {
-        return this.tail
-    }
-
-    /**
      * Get the position of the player
      * @returns {Circle} The position of the player
      */
     public getPosition(): Circle {
-        return new Circle(this.head.getCenter(), this.head.radius)
-    }
-
-    /**
-     * Remove the tail of the player 
-     */
-    public removeTail() {
-        this.tail = new Tail()
+        return new Circle(this.getCenter(), this.radius)
     }
 
     /**
@@ -319,15 +312,15 @@ export default class Player extends TypedEventEmitter<{
      * @returns 
      */
     public getRadius() {
-        return this.head.radius
-    }   
+        return this.radius
+    }
 
     /**
      * Set the radius of the player
      * @param radius 
      */
-    public setRadius(radius: number) {  
-        this.head.radius = radius
+    public setRadius(radius: number) {
+        this.radius = radius
     }
 
     /**

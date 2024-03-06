@@ -25,7 +25,7 @@ export default class PlayerManager extends TypedEventEmitter<{
     /**
      * Array of colors
      */
-    private static  colors= ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#FFFFFF", "#FFA500"]
+    private static colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#FFFFFF", "#FFA500"]
 
     /**
      * Max number of players
@@ -50,11 +50,12 @@ export default class PlayerManager extends TypedEventEmitter<{
      * @param {Socket} socketPlayer The socket of the player
      * @returns {boolean} True if the player has been added, false otherwise
      */
-    public addPlayer(socketPlayer: Socket):boolean {
+    public addPlayer(socketPlayer: Socket): boolean {
         if (this.isFull()) return false
         const player = socketPlayer.player
         player.setColor(PlayerManager.colors.filter((c) => !this.players.some((p) => p.getColor() === c))[0] || "#000000")
-        if(this.moderator === null)this.moderator = player
+        if (this.moderator === null) this.moderator = player
+        player.gameroom = this.gameRoom
         this.players.push(player)
         this.emit('player:Added', player)
         return true
@@ -85,7 +86,7 @@ export default class PlayerManager extends TypedEventEmitter<{
         const index = this.players.findIndex((p) => p.getID() === id)
         if (index !== -1) {
             const removed = this.players.splice(index, 1)[0];
-            if(this.moderator === removed)this.moderator = this.players[0] || null
+            if (this.moderator === removed) this.moderator = this.players[0] || null
             this.emit('player:Removed', removed)
             return removed
         }
@@ -121,7 +122,7 @@ export default class PlayerManager extends TypedEventEmitter<{
      * Get the moderator
      * @returns {Player | null} The moderator if it exists, null otherwise
      */
-    public getModerator(): Player | null{
+    public getModerator(): Player | null {
         return this.moderator
     }
 
@@ -130,8 +131,7 @@ export default class PlayerManager extends TypedEventEmitter<{
      * @param {Player} player The player to check
      * @returns {boolean} True if the player is the moderator, false otherwise
      */
-    public isModerator(player: Player): boolean{
+    public isModerator(player: Player): boolean {
         return this.moderator === player
     }
 }
-    
