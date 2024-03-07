@@ -35,7 +35,7 @@ export default class GameRoom {
     /**
      * board
      */
-    private board: QuadTree = new QuadTree(new Rectangle(0, 0, 1000, 1000))
+    private board: QuadTree = new QuadTree(800, 800)
 
     /**
      * Interval of the game

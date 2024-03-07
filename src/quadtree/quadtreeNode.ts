@@ -45,10 +45,10 @@ export default class QuadTreeNode {
         const x = this.bounds.x;
         const y = this.bounds.y;
         const nextLevel = this.level + 1;
-        this.nodes[0] = new QuadTree(new Rectangle(x + subWidth, y, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
-        this.nodes[1] = new QuadTree(new Rectangle(x, y, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
-        this.nodes[2] = new QuadTree(new Rectangle(x, y + subHeight, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
-        this.nodes[3] = new QuadTree(new Rectangle(x + subWidth, y + subHeight, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
+        this.nodes[0] = new QuadTreeNode(new Rectangle(x + subWidth, y, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
+        this.nodes[1] = new QuadTreeNode(new Rectangle(x, y, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
+        this.nodes[2] = new QuadTreeNode(new Rectangle(x, y + subHeight, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
+        this.nodes[3] = new QuadTreeNode(new Rectangle(x + subWidth, y + subHeight, subWidth, subHeight), this.maxObjects, this.maxLevels, nextLevel);
 
         //Move the objects to the subnodes
         for (let i = 0; i < this.objects.length; i++) {

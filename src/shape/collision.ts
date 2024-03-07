@@ -15,6 +15,10 @@ export const collisionBetweenLineAndLine = ({ p1: { x: x1, y: y1 }, p2: { x: x2,
     return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
 }
 
+export const circleIntersectsOrOutsideRectangle = (circle: Circle, { positon: { x: rectX, y: rectY }, width: rectWidth, height: rectHeight }: { positon: Dot, width: number, height: number }) => {
+    return circle.x + circle.radius < rectX || circle.x - circle.radius > rectX + rectWidth || circle.y + circle.radius < rectY || circle.y - circle.radius > rectY + rectHeight;
+}
+
 export const collisionBetweenCircleAndRectangle = (circle: Circle, { positon: { x: rectX, y: rectY }, width: rectWidth, height: rectHeight }: { positon: Dot, width: number, height: number }) => {
     let testX = circle.x;
     let testY = circle.y;

@@ -1,5 +1,5 @@
 import Circle from "./circle";
-import { collisionBetweenCircleAndRectangle, collisionBetweenRectangleAndLine } from "./collision";
+import { circleIntersectsOrOutsideRectangle, collisionBetweenCircleAndRectangle, collisionBetweenRectangleAndLine } from "./collision";
 import Dot from "./dot";
 import Line from "./line";
 import Shape from "./shape";
@@ -45,6 +45,11 @@ export default class Rectangle extends Shape {
         return new Dot(this.positon.x + this.width / 2, this.positon.y + this.height / 2);
     }
 
+    /**
+     * Check if the rectangle is colliding with another shape
+     * @param other The shape to check
+     * @returns True if the rectangle is colliding with the other shape, false otherwise
+     */
     collide(other: Shape): boolean {
         if (other instanceof Circle)
             return collisionBetweenCircleAndRectangle(other, this);
@@ -60,6 +65,15 @@ export default class Rectangle extends Shape {
             return collisionBetweenRectangleAndLine(this, other);
         }
         return false;
+    }
+
+    /**
+     * Check if the rectangle is intersecting or out of bound with another shape
+     * @param shape The shape to check
+     * @returns True if the rectangle is intersecting or out of bound with the other shape, false otherwise
+     */
+    isIntersectingOrOutOfBound(shape: Circle): boolean {
+        return circleIntersectsOrOutsideRectangle(shape, this);
     }
 
     get x() {

@@ -129,7 +129,7 @@ export default class Player extends Circle {
     }
 
     public detectCollision(quadtree: QuadTree) {
-        if (this.x - this.radius < 0 || this.x + this.radius > this.gameroom.getBoard().bounds.width || this.y - this.radius < 0 || this.y + this.radius > this.gameroom.getBoard().bounds.height) {
+        if (this.gameroom.getBoard().isIntersectingOrOutOfBound(this)) {
             this.kill()
         }
         if (this.invincible) return false
