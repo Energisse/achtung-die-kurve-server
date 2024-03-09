@@ -52,7 +52,7 @@ export default class QuadTreeNode {
 
         //Move the objects to the subnodes
         for (let i = 0; i < this.objects.length; i++) {
-            this.nodes.some(node => node.insert(this.objects[i]));
+            this.nodes.forEach(node => node.insert(this.objects[i]));
         }
 
         this.objects = [];

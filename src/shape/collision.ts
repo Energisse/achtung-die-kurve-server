@@ -16,7 +16,7 @@ export const collisionBetweenLineAndLine = ({ p1: { x: x1, y: y1 }, p2: { x: x2,
 }
 
 export const circleIntersectsOrOutsideRectangle = (circle: Circle, { positon: { x: rectX, y: rectY }, width: rectWidth, height: rectHeight }: { positon: Dot, width: number, height: number }) => {
-    return circle.x + circle.radius < rectX || circle.x - circle.radius > rectX + rectWidth || circle.y + circle.radius < rectY || circle.y - circle.radius > rectY + rectHeight;
+    return circle.x - circle.radius < rectX || circle.x + circle.radius > rectX + rectWidth || circle.y - circle.radius < rectY || circle.y + circle.radius > rectY + rectHeight;
 }
 
 export const collisionBetweenCircleAndRectangle = (circle: Circle, { positon: { x: rectX, y: rectY }, width: rectWidth, height: rectHeight }: { positon: Dot, width: number, height: number }) => {
