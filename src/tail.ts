@@ -73,6 +73,7 @@ export class Tail {
      */
     public clear() {
         this.parts = [];
+        this.partsToAdd = [];
     }
 
 }
