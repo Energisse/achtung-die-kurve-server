@@ -2,16 +2,18 @@ import GameRoom from "../gameRoom";
 import Player from "../player";
 import Tick from "../tick";
 import TypedEventEmitter from "../typedEventEmitter";
-import ChucknorrisPowerUp from "./chucknorrisPowerUp";
-import HeadDecreasePowerUp from "./headDecreasePowerUp";
-import HeadIncreasePowerUp from "./headIncreasePowerUp";
-import InvertedPowerUp from "./invertedPowerUp";
-import InvinciblePowerUp from "./invinciblePowerUp";
-import LineDecreasePowerUp from "./lineDecreasePowerUp";
-import LineIncreasePowerUp from "./lineIncreasePowerUp";
+import ChucknorrisPowerUp from "./playerPowerUp/chucknorrisPowerUp";
+import HeadDecreasePowerUp from "./playerPowerUp/headDecreasePowerUp";
+import HeadIncreasePowerUp from "./playerPowerUp/headIncreasePowerUp";
+import InvertedPowerUp from "./playerPowerUp/invertedPowerUp";
+import InvinciblePowerUp from "./playerPowerUp/invinciblePowerUp";
+import LineDecreasePowerUp from "./playerPowerUp/lineDecreasePowerUp";
+import LineIncreasePowerUp from "./playerPowerUp/lineIncreasePowerUp";
 import PowerUp from "./powerUp";
-import SpeedDecreasePowerUp from "./speedDecreasePowerUp";
-import SpeedIncreasePowerUp from "./speedIncreasePowerUp";
+import SpeedDecreasePowerUp from "./playerPowerUp/speedDecreasePowerUp";
+import SpeedIncreasePowerUp from "./playerPowerUp/speedIncreasePowerUp";
+import ClearBoardPowerUp from "./boardPowerUp/clearBoardPowerUp";
+import TeleporterBoardPowerUp from "./boardPowerUp/teleporterBoardPowerUp";
 
 export default class PowerUpManager extends TypedEventEmitter<{
     'powerUp:Added': [PowerUp],
@@ -20,7 +22,7 @@ export default class PowerUpManager extends TypedEventEmitter<{
     /**
      * Array of power ups constructor 
      */
-    private powerUps: Array<{ new(): PowerUp }> = []
+    private powerUps: Array<{ new(gameRoom: GameRoom): PowerUp }> = []
 
 
     /**
@@ -55,13 +57,15 @@ export default class PowerUpManager extends TypedEventEmitter<{
             SpeedIncreasePowerUp,
             SpeedDecreasePowerUp,
             HeadDecreasePowerUp,
-            HeadIncreasePowerUp
+            HeadIncreasePowerUp,
+            ClearBoardPowerUp,
+            TeleporterBoardPowerUp
         ]
     }
 
     public generatePowerUp() {
         if (Math.random() < 0.005) {
-            const powerUp = new this.powerUps[Math.floor(Math.random() * this.powerUps.length)]()
+            const powerUp = new this.powerUps[Math.floor(Math.random() * this.powerUps.length)](this.gameRoom)
             this.currentPowerUps.push(powerUp)
             this.gameRoom.getBoard().insert(powerUp)
         }
@@ -76,7 +80,7 @@ export default class PowerUpManager extends TypedEventEmitter<{
             this.activePowerUps = this.activePowerUps.filter((activePowerUp) => {
                 activePowerUp.remainingTicks--;
                 if (activePowerUp.remainingTicks <= 0) {
-                    activePowerUp.powerUp.unapplyEffect()
+                    activePowerUp.powerUp.unapplyEffect(this.gameRoom)
                     return false
                 }
                 return true
@@ -87,17 +91,17 @@ export default class PowerUpManager extends TypedEventEmitter<{
     }
 
     collide(player: Player, powerUp: PowerUp) {
-        console.log('collide', player, powerUp)
-        powerUp.applyEffect(player, this.gameRoom.getPlayerManager().getPlayers())
+        powerUp.onCollide(this.gameRoom, player)
         this.activePowerUps.push({ powerUp, remainingTicks: powerUp.getDuration() * Tick.staticTickRate })
         this.currentPowerUps = this.currentPowerUps.filter(p => p !== powerUp)
+        this.gameRoom.getBoard().remove(powerUp)
     }
 
     /**
      * Reset the power up manager
      */
     reset() {
-        this.activePowerUps.forEach(({ powerUp }) => powerUp.unapplyEffect())
+        this.activePowerUps.forEach(({ powerUp }) => powerUp.unapplyEffect(this.gameRoom))
         this.currentPowerUps = []
         this.activePowerUps = []
     }

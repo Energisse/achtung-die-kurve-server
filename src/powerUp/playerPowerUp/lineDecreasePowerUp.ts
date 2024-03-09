@@ -1,10 +1,10 @@
-import Player from "../player"
-import PowerUp from "./powerUp"
+import Player from "../../player"
+import PlayerPowerUp from "./playerPowerUp"
 
-export default class InvertedPowerUp extends PowerUp {
+export default class LineDecreasePowerUp extends PlayerPowerUp {
 
     constructor() {
-        super(10, "inverted")
+        super(10, "speed-decrease")
     }
 
     /**
@@ -12,7 +12,7 @@ export default class InvertedPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public applyEffectToPlayer(player: Player): void {
-        player.setInverted(!player.getInverted())
+        player.setLineWidth(player.getLineWidth() / 2)
     }
 
     /**
@@ -20,6 +20,6 @@ export default class InvertedPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public unapplyEffectToPlayer(player: Player): void {
-        player.setInverted(!player.getInverted())
+        player.setLineWidth(player.getLineWidth() * 2)
     }
 }

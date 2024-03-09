@@ -69,6 +69,16 @@ export class Tail {
     }
 
     /**
+     * Remove all parts of the tail 
+     */
+    public removeAllParts() {
+        this.parts.forEach(t => {
+            this.player.gameroom.getBoard().remove(t)
+        })
+        this.parts = [];
+    }
+
+    /**
      * Clear the tail
      */
     public clear() {

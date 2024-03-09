@@ -1,10 +1,10 @@
-import Player from "../player"
-import PowerUp from "./powerUp"
+import Player from "../../player"
+import PlayerPowerUp from "./playerPowerUp"
 
-export default class ChucknorrisPowerUp extends PowerUp {
+export default class SpeedIncreasePowerUp extends PlayerPowerUp {
 
     constructor() {
-        super(10, "chucknorris")
+        super(10, "speed-increase")
     }
 
     /**
@@ -12,7 +12,7 @@ export default class ChucknorrisPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public applyEffectToPlayer(player: Player): void {
-        player.setChuckNorris(player.getChuckNorris() + 1)
+        player.setSpeed(player.getSpeed() * 2)
     }
 
     /**
@@ -20,6 +20,6 @@ export default class ChucknorrisPowerUp extends PowerUp {
      * @param player The player who takes the power up
      */
     public unapplyEffectToPlayer(player: Player): void {
-        player.setChuckNorris(player.getChuckNorris() - 1)
+        player.setSpeed(player.getSpeed() / 2)
     }
 }

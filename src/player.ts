@@ -129,9 +129,16 @@ export default class Player extends Circle {
     }
 
     public detectCollision(quadtree: QuadTree) {
-        if (this.gameroom.getBoard().isIntersectingOrOutOfBound(this)) {
-            this.kill()
+        if (this.gameroom.getBoard().isOutOfBound(this)) {
+            if (this.gameroom.getBoard().teleporter) {
+                if (this.x > this.gameroom.getBoard().width) this.x = 0;
+                else if (this.x < 0) this.x = this.gameroom.getBoard().width;
+                if (this.y > this.gameroom.getBoard().height) this.y = 0;
+                else if (this.y < 0) this.y = this.gameroom.getBoard().height;
+            }
+            else this.kill();
         }
+
         if (this.invincible) return false
         let circle = new Circle(this.getCenter(), this.radius)
         if (this.chucknorris) circle.radius += 10
@@ -169,7 +176,6 @@ export default class Player extends Circle {
             }
             else if (object instanceof PowerUp) {
                 this.gameroom.getPowerUpManager().collide(this, object)
-                this.gameroom.getBoard().remove(object)
             }
         })
     }

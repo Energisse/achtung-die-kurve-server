@@ -1,3 +1,4 @@
+import Player from "../player";
 import PowerUp from "../powerUp/powerUp";
 import Circle from "../shape/circle";
 import PlayerTail from "../shape/playerTail";
@@ -10,6 +11,11 @@ export default class QuadTree extends QuadTreeNode {
     private newShape: Array<Shape> = [];
 
     private removedShapes: Array<Shape> = [];
+
+    /**
+     * If the player can teleport when he is out of the bounds
+     */
+    public teleporter: number = 0;
 
     /**
      * Constructor of the QuadTree
@@ -99,13 +105,8 @@ export default class QuadTree extends QuadTreeNode {
         return result;
     }
 
-    /**
-     * Check if the rectangle is intersecting or out of bound with another shape
-     * @param shape The shape to check
-     * @returns True if the rectangle is intersecting or out of bound with the other shape, false otherwise
-     */
-    isIntersectingOrOutOfBound(shape: Circle): boolean {
-        return this.bounds.isIntersectingOrOutOfBound(shape);
+    isOutOfBound(player: Player) {
+        return this.bounds.isIntersectingOrOutOfBound(player)
     }
 
     get width() {

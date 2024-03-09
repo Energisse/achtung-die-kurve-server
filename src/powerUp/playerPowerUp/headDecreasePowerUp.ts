@@ -1,7 +1,7 @@
-import Player from "../player"
-import PowerUp from "./powerUp"
+import Player from "../../player"
+import PlayerPowerUp from "./playerPowerUp"
 
-export default class HeadDecreasePowerUp extends PowerUp {
+export default class HeadDecreasePowerUp extends PlayerPowerUp {
 
     constructor() {
         super(10, "head-decrease")
