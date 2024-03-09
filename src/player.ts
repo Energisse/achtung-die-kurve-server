@@ -158,21 +158,6 @@ export default class Player extends Circle {
                 }
             }
             else if (object instanceof PlayerTail) {
-                if (object.player === this) {
-                    //Chek for lastest part of the tail of the player
-                    for (let i = this.tail.getParts().length - 1; i >= 0; i--) {
-                        //while they are colliding we skip to the next part
-                        if (circle.collide(this.tail.getParts()[i])) {
-                            //the tail is just added to the player so the player didn't die 
-                            if (this.tail.getParts()[i] === object) return
-                        }
-                        else {
-                            //the object is not a fresh tail so the player die
-                            break
-                        }
-                    }
-                }
-
                 if (this.chucknorris) {
                     object.player.tail.removePart(object.id)
                 }
